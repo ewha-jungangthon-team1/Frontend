@@ -1,29 +1,52 @@
 import { useState } from "react";
+import { Route, Routes, useLocation, useNavigate } from "react-router";
 import GNB from "./components/GNB";
 import Home from "./pages/Home";
 import Care from "./pages/Care";
+import PersonalCare from "./pages/PersonalCare";
 import Report from "./pages/Report";
 
-const PAGES = {
-  home: Home,
-  care: Care,
-  report: Report,
+const PAGE_PATHS = {
+  home: "/",
+  care: "/care",
+  report: "/report",
 };
 
 function App() {
-  const [currentPage, setCurrentPage] = useState("home");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const CurrentPage = PAGES[currentPage];
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const currentPage = location.pathname.startsWith("/care")
+    ? "care"
+    : location.pathname === "/report"
+      ? "report"
+      : "home";
 
   const handleSelectPage = (page) => {
-    setCurrentPage(page);
+    navigate(PAGE_PATHS[page]);
     setIsMenuOpen(false);
+  };
+
+  const handleOpenMenu = () => {
+    setIsMenuOpen(true);
   };
 
   return (
     <>
-      <CurrentPage onOpenMenu={() => setIsMenuOpen(true)} />
+      <Routes>
+        <Route path="/" element={<Home onOpenMenu={handleOpenMenu} />} />
+
+        <Route path="/care" element={<Care onOpenMenu={handleOpenMenu} />} />
+
+        <Route path="/care/personal" element={<PersonalCare />} />
+
+        <Route
+          path="/report"
+          element={<Report onOpenMenu={handleOpenMenu} />}
+        />
+      </Routes>
 
       {isMenuOpen && (
         <GNB

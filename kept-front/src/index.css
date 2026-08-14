@@ -2,7 +2,9 @@
 @import "tailwindcss";
 
 @theme {
-  --font-apple-gothic: "Apple SD Gothic Neo", -apple-system, BlinkMacSystemFont;
+  --font-sans:
+    Helvetica, "Helvetica Neue", "Apple SD Gothic Neo", -apple-system,
+    BlinkMacSystemFont, Arial, sans-serif;
 
   --color-gray-100: #1f1c1a;
   --color-gray-90: #353331;
@@ -11,13 +13,18 @@
   --color-gray-60: #797776;
   --color-gray-50: #8f8e8d;
   --color-gray-40: #a5a4a3;
+  --color-gray-30: #bcbbba;
   --color-gray-20: #d2d2d1;
   --color-gray-10: #e9e8e8;
   --color-gray-5: #f4f4f4;
+
+  --color-main-1: #892a17;
+  --color-main-2: #741502;
+  --color-main-3: #400c01;
 }
 
 @layer base {
   html {
-    font-family: var(--font-apple-gothic);
+    font-family: var(--font-sans);
   }
 }
