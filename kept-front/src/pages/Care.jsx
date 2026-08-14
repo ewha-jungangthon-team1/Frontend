@@ -1,9 +1,10 @@
+import { Link } from "react-router";
 const CARE_METRICS = ["현재 온도 47°C", "우측 하중 68%", "형태 편차 7%"];
 
 function CareBackground() {
   return (
     <img
-      src="/images/2-care.png"
+      src="/images/2-care-red.png"
       alt=""
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 h-full w-full object-cover"
@@ -56,7 +57,7 @@ function Care({ onOpenMenu }) {
             {CARE_METRICS.map((metric) => (
               <li
                 key={metric}
-                className="rounded-full bg-gray-5/80 px-3 py-2 text-[16px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-60"
+                className="rounded-full bg-white/80 px-3 py-2 text-[16px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-60"
               >
                 {metric}
               </li>
@@ -66,12 +67,12 @@ function Care({ onOpenMenu }) {
 
         {/*하단 버튼 영역*/}
         <div className="mt-auto px-6 pb-[55px]">
-          <button
-            type="button"
-            className="w-full rounded-lg bg-gray-70 px-3 py-2.5 text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-white"
+          <Link
+            to="/care/personal"
+            className="flex w-full items-center justify-center rounded-lg bg-gray-70 px-3 py-2.5 text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-white"
           >
             전체 케어 방법 보기
-          </button>
+          </Link>
         </div>
       </div>
     </main>
