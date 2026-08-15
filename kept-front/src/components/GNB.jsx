@@ -2,11 +2,12 @@ const MENUS = [
   { id: "home", label: "Home" },
   { id: "care", label: "Care" },
   { id: "report", label: "Report" },
+  { id: "mybag", label: "My Bag" },
 ];
 
 function GNB({ currentPage, onSelect, onClose }) {
   return (
-    <nav className="fixed inset-0 z-50 bg-gray-70" aria-label="전체 메뉴">
+    <nav className="fixed inset-0 z-50 bg-main-2" aria-label="전체 메뉴">
       <ul className="absolute left-6 top-[83px] flex flex-col gap-[14px]">
         {MENUS.map((menu) => {
           const isActive = currentPage === menu.id;

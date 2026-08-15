@@ -5,11 +5,13 @@ import Home from "./pages/Home";
 import Care from "./pages/Care";
 import PersonalCare from "./pages/PersonalCare";
 import Report from "./pages/Report";
+import MyBag from "./pages/MyBag";
 
 const PAGE_PATHS = {
   home: "/",
   care: "/care",
   report: "/report",
+  mybag: "/mybag",
 };
 
 function App() {
@@ -22,7 +24,9 @@ function App() {
     ? "care"
     : location.pathname === "/report"
       ? "report"
-      : "home";
+      : location.pathname === "/mybag"
+        ? "mybag"
+        : "home";
 
   const handleSelectPage = (page) => {
     navigate(PAGE_PATHS[page]);
@@ -45,6 +49,11 @@ function App() {
         <Route
           path="/report"
           element={<Report onOpenMenu={handleOpenMenu} />}
+        />
+
+        <Route
+          path="/mybag"
+          element={<MyBag onOpenMenu={handleOpenMenu} />}
         />
       </Routes>
 
