@@ -1,9 +1,14 @@
 // 데이터 포인트 배열({time, value})을 받아서
 // 라인 그래프를 그리는 데 필요한 좌표와 SVG path 문자열을 계산하는 훅
-function useGraphPath(points, { width, height, padding = 0 }) {
+// minValue/maxValue를 직접 넘기면 그 값을 기준으로 스케일을 고정한다
+// (그래프가 애니메이션되는 동안 축이 계속 다시 계산되어 흔들리는 것을 방지)
+function useGraphPath(
+  points,
+  { width, height, padding = 0, minValue: minOverride, maxValue: maxOverride },
+) {
   const values = points.map((point) => point.value);
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
+  const minValue = minOverride ?? Math.min(...values);
+  const maxValue = maxOverride ?? Math.max(...values);
 
   // 값이 모두 같을 때 0으로 나누는 것을 방지
   const valueRange = maxValue - minValue || 1;
