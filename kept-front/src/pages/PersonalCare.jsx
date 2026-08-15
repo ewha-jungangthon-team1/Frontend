@@ -160,7 +160,7 @@ function PersonalCare() {
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
         <img
-          src="/images/2-1.personalcare.png"
+          src="/images/2-1.personalcare-red.png"
           alt=""
           className="absolute inset-0 h-full w-full object-cover object-top"
         />
