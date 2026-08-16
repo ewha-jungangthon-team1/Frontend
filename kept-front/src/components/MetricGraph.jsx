@@ -1,4 +1,5 @@
 import useGraphPath from "../hooks/useGraphPath";
+import useGraphAnimation from "../hooks/useGraphAnimation";
 
 const GRAPH_WIDTH = 264;
 const GRAPH_HEIGHT = 160;
@@ -7,10 +8,20 @@ const GRAPH_PADDING = 6;
 // 지표 하나의 시간대별 변화를 보여주는 라인 그래프
 // points: [{ time, value }], yAxisLabels: 좌측에 표시할 눈금 값
 function MetricGraph({ points, yAxisLabels, unit }) {
-  const { coords, linePath } = useGraphPath(points, {
+  // 실제(목표) 값 기준으로 축 범위를 고정해둔다
+  const values = points.map((point) => point.value);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+
+  // 화면에 나타날 때 0 -> 실제 값으로 부드럽게 차오르는 애니메이션 포인트
+  const animatedPoints = useGraphAnimation(points);
+
+  const { coords, linePath } = useGraphPath(animatedPoints, {
     width: GRAPH_WIDTH,
     height: GRAPH_HEIGHT,
     padding: GRAPH_PADDING,
+    minValue,
+    maxValue,
   });
 
   const lastCoord = coords[coords.length - 1];
@@ -34,8 +45,7 @@ function MetricGraph({ points, yAxisLabels, unit }) {
           >
             {/* 가로 보조선 */}
             {yAxisLabels.map((label, index) => {
-              const y =
-                (GRAPH_HEIGHT / (yAxisLabels.length - 1)) * index;
+              const y = (GRAPH_HEIGHT / (yAxisLabels.length - 1)) * index;
 
               return (
                 <line
@@ -81,7 +91,7 @@ function MetricGraph({ points, yAxisLabels, unit }) {
                 top: `${(lastCoord.y / GRAPH_HEIGHT) * 100}%`,
               }}
             >
-              {lastCoord.value}
+              {Math.round(lastCoord.value)}
               {unit}
             </span>
           )}

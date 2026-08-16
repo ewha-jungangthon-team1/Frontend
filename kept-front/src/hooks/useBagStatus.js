@@ -2,7 +2,8 @@ import { useState } from "react";
 
 // 가방 상태 지표 목록
 // 실제 서비스에서는 API 응답으로 대체될 데이터이며, 지금은 화면 확인용 더미 데이터
-const METRICS = [
+// Report 화면 등 다른 곳에서도 그대로 재사용할 수 있도록 export 한다
+export const BAG_METRICS = [
   {
     id: "temperature",
     label: "현재 온도",
@@ -60,7 +61,7 @@ function useBagStatus() {
   const [selectedMetricId, setSelectedMetricId] = useState(null);
 
   const selectedMetric =
-    METRICS.find((metric) => metric.id === selectedMetricId) ?? null;
+    BAG_METRICS.find((metric) => metric.id === selectedMetricId) ?? null;
 
   // 지표 배지를 클릭하면 해당 지표를 선택해 바텀시트를 연다
   const openMetric = (metricId) => {
@@ -72,7 +73,7 @@ function useBagStatus() {
     setSelectedMetricId(null);
   };
 
-  return { metrics: METRICS, selectedMetric, openMetric, closeMetric };
+  return { metrics: BAG_METRICS, selectedMetric, openMetric, closeMetric };
 }
 
 export default useBagStatus;
