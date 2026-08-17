@@ -6,6 +6,7 @@ import Care from "./pages/Care";
 import PersonalCare from "./pages/PersonalCare";
 import Report from "./pages/Report";
 import MyBag from "./pages/MyBag";
+import MyBagDetail from "./pages/MyBagDetail";
 
 const PAGE_PATHS = {
   home: "/",
@@ -24,7 +25,7 @@ function App() {
     ? "care"
     : location.pathname === "/report"
       ? "report"
-      : location.pathname === "/mybag"
+      : location.pathname.startsWith("/mybag")
         ? "mybag"
         : "home";
 
@@ -51,9 +52,10 @@ function App() {
           element={<Report onOpenMenu={handleOpenMenu} />}
         />
 
+        <Route path="/mybag" element={<MyBag onOpenMenu={handleOpenMenu} />} />
         <Route
-          path="/mybag"
-          element={<MyBag onOpenMenu={handleOpenMenu} />}
+          path="/mybag/:categoryId"
+          element={<MyBagDetail onOpenMenu={handleOpenMenu} />}
         />
       </Routes>
 
