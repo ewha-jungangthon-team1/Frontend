@@ -14,7 +14,7 @@ function CareBackground() {
 
 function Care({ onOpenMenu }) {
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-white">
+    <main className="relative mx-auto min-h-dvh w-full max-w-[393px] overflow-hidden bg-white">
       {/*배경 그라데이션*/}
       <CareBackground />
 

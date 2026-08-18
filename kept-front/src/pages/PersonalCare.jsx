@@ -153,7 +153,7 @@ function PersonalCare() {
   };
 
   return (
-    <main className="relative h-dvh overflow-hidden bg-white">
+    <main className="relative mx-auto h-dvh w-full max-w-[393px] overflow-hidden bg-white">
       {/* 배경 */}
       <div
         aria-hidden="true"

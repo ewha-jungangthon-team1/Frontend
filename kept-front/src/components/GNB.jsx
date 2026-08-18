@@ -7,7 +7,10 @@ const MENUS = [
 
 function GNB({ currentPage, onSelect, onClose }) {
   return (
-    <nav className="fixed inset-0 z-50 bg-main-2" aria-label="전체 메뉴">
+    <nav
+      className="fixed inset-y-0 left-1/2 z-50 w-full max-w-[393px] -translate-x-1/2 bg-main-2"
+      aria-label="전체 메뉴"
+    >
       <ul className="absolute left-6 top-[83px] flex flex-col gap-[14px]">
         {MENUS.map((menu) => {
           const isActive = currentPage === menu.id;
