@@ -1,14 +1,10 @@
 import { useEffect, useState } from "react";
 import useLiveSession from "./useLiveSession";
 
-// 그래프 한 칸의 간격 (5분) — "x축 5분 단위" 요구사항
+// 그래프 한 칸의 간격 (5분)
 const BUCKET_MS = 5 * 60 * 1000;
 // 그래프에 보여줄 칸 개수 (최근 30분 = 5분 × 6칸)
 const BUCKET_COUNT = 6;
-const WINDOW_MS = BUCKET_MS * BUCKET_COUNT;
-// 원본 기록은 창(30분)보다 조금 더 길게 보관해서, 가장 오래된 칸도
-// "그 이전의 마지막 값"을 이어받을 수 있게 해준다 (라인이 뚝 끊기지 않도록)
-const RAW_HISTORY_MAX_AGE_MS = WINDOW_MS + BUCKET_MS;
 
 // presentation.display_metrics의 key → 화면에서 쓰는 지표 id 매핑
 // (Home.jsx, MetricDrawer 등 다른 곳에서도 이 id로 지표를 구분한다)
@@ -51,59 +47,40 @@ function formatClock(ms) {
 }
 
 /**
- * 원본 기록(rawList: 시간순 [{ timeMs, value }])을 받아서,
- * "최근 30분을 5분 간격 6칸"으로 나눈 시계열로 변환한다.
+ * 실시간 세션(useLiveSession)을 2초마다 폴링하지만, 그래프에 반영되는 시점은
+ * "5분에 한 번"으로 분리한 훅입니다.
  *
- * - 가장 최근 칸은 최신 reading의 시각을 5분 단위로 내림한 시각이고,
- *   거기서 5분씩 거슬러 올라가며 총 6칸을 만든다.
- *   예) 최신 값이 14:42에 들어왔다면 칸은 14:15/14:20/.../14:40.
- * - 각 칸에는 "그 칸 시각 이전의 가장 최근 값"을 채운다(계단식 보간).
- *   아직 데이터가 없는 칸(세션이 30분이 채 안 됐을 때)은 가장 오래된
- *   원본 값으로 채워서 라인이 끊기지 않게 한다.
- * - 다음 폴링에서 5분 경계를 넘어가면 가장 오래된 칸이 자동으로 빠지고
- *   새 칸이 오른쪽에 생기는 "최근 30분" 슬라이딩 윈도우가 된다.
- */
-function bucketize(rawList) {
-  if (rawList.length === 0) return [];
-
-  const latestMs = rawList[rawList.length - 1].timeMs;
-  const lastBucketMs = Math.floor(latestMs / BUCKET_MS) * BUCKET_MS;
-
-  const bucketPoints = [];
-  for (let i = BUCKET_COUNT - 1; i >= 0; i -= 1) {
-    const bucketMs = lastBucketMs - i * BUCKET_MS;
-
-    // 이 칸 시각 이전(≤)에 관측된 값 중 가장 최근 값을 찾는다
-    let candidate = rawList[0];
-    for (const entry of rawList) {
-      if (entry.timeMs > bucketMs) break;
-      candidate = entry;
-    }
-
-    bucketPoints.push({ time: formatClock(bucketMs), value: candidate.value });
-  }
-
-  return bucketPoints;
-}
-
-/**
- * 실시간 세션(useLiveSession)을 폴링하면서, 매번 새로 들어오는 reading을
- * 지표별 원본 기록으로 쌓아두고, "최근 30분 · 5분 간격 6칸" 그래프 데이터로
- * 가공해서 그래프 바텀시트(MetricDrawer)가 바로 쓸 수 있는 형태로 내려주는 훅입니다.
+ * - 폴링 자체(2초 간격)는 그대로 둡니다. 배지/실시간 수치는 여전히 매 폴링마다
+ *   최신값(reading)을 그대로 쓰면 되고, 이 훅도 값 조회 자체는 계속합니다.
+ * - 다만 그래프용 points 배열은 폴링될 때마다 새로 만들지 않고,
+ *   "committed(확정)" 상태로 따로 관리해서 5분에 한 번만 갱신합니다.
+ *   → 그래프가 2초마다 리렌더링/애니메이션되던 문제가 사라집니다.
+ *
+ * 동작 방식:
+ * 1) 이 지표를 처음 관측하는 순간 즉시 1번째 점을 확정(commit)한다.
+ *    (그래서 세션 시작 첫 5분 동안은 그래프에 점이 1개만 있다)
+ * 2) 그 후로 5분이 지날 때마다(폴링으로 시계를 체크) 그 시점의 최신 값을
+ *    새 점으로 확정해서 추가한다. → 점이 2개, 3개, ... 6개로 점점 늘어난다.
+ * 3) 6개가 다 차면, 그 다음 5분마다 가장 오래된 점이 빠지고 새 점이 오른쪽에
+ *    붙는 슬라이딩 윈도우가 된다 (= 항상 "최근 30분"만 보여준다).
  *
  * ⚠️ 현재 백엔드에는 "과거 기록 조회" 전용 API가 없고 latest-reading만 있어서,
- * 폴링될 때마다 들어오는 값을 프론트에서 직접 쌓아 그래프를 그립니다.
- * → 세션이 갓 시작되면(30분이 안 지났으면) 앞 칸들은 최초 값으로 채워져
- *   그래프가 납작하게 보일 수 있고, 새로고침하면 지금까지 쌓인 기록은 초기화됩니다.
- * → 추후 "세션별 기록 목록"을 내려주는 API가 추가되면, 이 훅의 rawHistory 누적
- *   로직(useEffect + setRawHistory) 대신 그 API 응답을 그대로 bucketize에
- *   넘기도록 바꾸면 됩니다.
+ * 5분마다 폴링에서 얻은 "그 시점의 최신값"을 그대로 확정 값으로 씁니다.
+ * → 새로고침하면 지금까지 확정된 점들은 초기화됩니다.
+ * → 추후 "세션별 기록 목록"을 내려주는 API가 추가되면, committed 누적 로직 대신
+ *   그 API 응답을 그대로 points로 매핑하도록 바꾸면 됩니다.
  */
 function useBagMetrics(publicToken) {
   const { reading, isLoading, isError, error } = useLiveSession(publicToken);
 
-  // key(right_load_percent 등) → [{ timeMs, value }] 원본 기록 (시간순)
-  const [rawHistory, setRawHistory] = useState({});
+  // key(right_load_percent 등) → { points: [{ time, value }], nextCommitAtMs }
+  const [committed, setCommitted] = useState({});
+
+  // 선택된 가방(publicToken)이 바뀌면 이전 세션의 확정 기록을 초기화한다
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCommitted({});
+  }, [publicToken]);
 
   useEffect(() => {
     const values = reading?.presentation?.values;
@@ -111,28 +88,49 @@ function useBagMetrics(publicToken) {
 
     const timeMs = new Date(reading.observed_at).getTime();
 
-    // 매 폴링마다 "이전까지 쌓은 기록 + 이번에 새로 온 값"을 합쳐야 하므로
-    // (외부 폴링 데이터를 누적하는 것이라 렌더링 중 순수 계산으로 대체할 수 없음)
+    // 매 폴링마다 "5분이 지났는지" 확인해서, 지났을 때만 새 점을 확정해야 하므로
+    // (외부 폴링 데이터를 시간 기준으로 누적하는 것이라 렌더링 중 순수 계산으로 대체할 수 없음)
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setRawHistory((prevHistory) => {
-      const nextHistory = { ...prevHistory };
+    setCommitted((prevCommitted) => {
+      let changed = false;
+      const nextCommitted = { ...prevCommitted };
 
       Object.keys(METRIC_PRESENTATION).forEach((key) => {
         const value = values[key];
         if (value == null) return;
 
-        const list = prevHistory[key] ?? [];
-        const nextList = [...list, { timeMs, value }];
+        const prevEntry = prevCommitted[key];
 
-        // 창(30분)보다 오래된 기록은 정리해서 메모리가 무한히 늘어나지 않게 한다
-        const cutoffMs = timeMs - RAW_HISTORY_MAX_AGE_MS;
-        nextHistory[key] = nextList.filter((entry) => entry.timeMs >= cutoffMs);
-        // 다 걸러졌다면(= 오래된 값 하나도 없이 창을 벗어남) 최소 마지막 값은 남겨둔다
-        if (nextHistory[key].length === 0)
-          nextHistory[key] = [nextList[nextList.length - 1]];
+        // 이 지표를 처음 관측한 순간 → 즉시 1번째 점을 확정
+        if (!prevEntry) {
+          nextCommitted[key] = {
+            points: [{ time: formatClock(timeMs), value }],
+            nextCommitAtMs: timeMs + BUCKET_MS,
+          };
+          changed = true;
+          return;
+        }
+
+        // 아직 다음 5분 경계에 도달하지 않았으면 그대로 둔다(그래프 업데이트 없음)
+        if (timeMs < prevEntry.nextCommitAtMs) return;
+
+        // 5분 경계를 넘었으면(오래 자리를 비웠다가 돌아온 경우 여러 번일 수도 있음)
+        // 경계마다 그 시점의 최신 값으로 점을 하나씩 확정해서 따라잡는다
+        let points = prevEntry.points;
+        let nextCommitAtMs = prevEntry.nextCommitAtMs;
+        while (timeMs >= nextCommitAtMs) {
+          points = [
+            ...points,
+            { time: formatClock(nextCommitAtMs), value },
+          ].slice(-BUCKET_COUNT);
+          nextCommitAtMs += BUCKET_MS;
+        }
+
+        nextCommitted[key] = { points, nextCommitAtMs };
+        changed = true;
       });
 
-      return nextHistory;
+      return changed ? nextCommitted : prevCommitted;
     });
     // reading.sequence가 바뀔 때만(=새 데이터가 도착했을 때만) 실행
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -149,10 +147,12 @@ function useBagMetrics(publicToken) {
     const config = METRIC_PRESENTATION[metric.key];
     if (!config) return;
 
-    const rawList = rawHistory[metric.key] ?? [
-      { timeMs: new Date(reading.observed_at).getTime(), value: metric.value },
+    const points = committed[metric.key]?.points ?? [
+      {
+        time: formatClock(new Date(reading.observed_at).getTime()),
+        value: metric.value,
+      },
     ];
-    const points = bucketize(rawList);
 
     // 우측 하중은 "우측 68%" 처럼 우세한 쪽 방향을 함께 보여준다
     let displayValue = `${metric.value}${metric.unit}`;
