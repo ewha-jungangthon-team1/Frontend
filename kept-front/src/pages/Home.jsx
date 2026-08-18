@@ -1,9 +1,33 @@
 import { Link } from "react-router";
 import useBagStatus from "../hooks/useBagStatus";
+import useLiveSession from "../hooks/useLiveSession";
+import useBagStore from "../store/bagStore";
 import MetricBadge from "../components/MetricBadge";
 import MetricDrawer from "../components/MetricDrawer";
 
+<<<<<<< Updated upstream
 // Care 화면과 동일한 경고 상태 배경(핑크 그라데이션)을 재사용
+=======
+// ⚠️ 테스트용 임시 토큰
+
+const TEMP_PUBLIC_TOKEN = "11111111-1111-1111-1111-111111111111";
+
+// display_metrics의 key → 기존 그래프 바텀시트(useBagStatus)의 id 매핑
+const METRIC_KEY_TO_DRAWER_ID = {
+  right_load_percent: "rightLoad",
+  shape_deviation_percent: "shapeDeviation",
+  temperature_c: "temperature",
+};
+
+// 배지가 가방 이미지 위 어디에 놓일지는 고정 (3번째 지표까지만 대응)
+const BADGE_POSITION_CLASSES = [
+  "absolute -right-6 top-10",
+  "absolute -left-8 bottom-20",
+  "absolute -right-4 bottom-6",
+];
+
+// Care 화면과 동일한 배경
+>>>>>>> Stashed changes
 function HomeBackground() {
   return (
     <img
@@ -15,18 +39,46 @@ function HomeBackground() {
   );
 }
 
+// observed_at("2026-08-16T12:00:00+09:00") → "12:00 update" 형태로 변환
+function formatUpdateTime(isoString) {
+  if (!isoString) return "";
+  const date = new Date(isoString);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm} update`;
+}
+
 function Home({ onOpenMenu }) {
-  // 가방 상태 지표 데이터 + 그래프 바텀시트 열림/닫힘 상태
   const { selectedMetric, openMetric, closeMetric } = useBagStatus();
 
+  const storedToken = useBagStore((state) => state.publicToken);
+  const publicToken = storedToken ?? TEMP_PUBLIC_TOKEN;
+
+  const { reading, isLoading, isError, error } = useLiveSession(publicToken);
+
+  if (isLoading) {
+    return (
+      <main className="relative mx-auto flex min-h-[852px] w-full max-w-[393px] items-center justify-center bg-white">
+        <p className="text-[15px] text-gray-50">불러오는 중...</p>
+      </main>
+    );
+  }
+
+  if (isError) {
+    return (
+      <main className="relative mx-auto flex min-h-[852px] w-full max-w-[393px] items-center justify-center bg-white px-6 text-center">
+        <p className="text-[15px] text-gray-50">{error.message}</p>
+      </main>
+    );
+  }
+
+  const { state, display_metrics } = reading.presentation;
+
   return (
-    // 화면 크기 393 x 852 기준으로 디자인 (모바일 실기기에서는 w-full로 화면 너비에 맞춰짐)
     <main className="relative mx-auto min-h-[852px] w-full max-w-[393px] overflow-hidden bg-white">
-      {/* 배경 그라데이션 */}
       <HomeBackground />
 
       <div className="relative z-10 flex min-h-[852px] flex-col">
-        {/* 상단 영역 */}
         <header className="flex items-start justify-between px-6 pt-[83px]">
           <h1 className="text-[28px] leading-[1.32] tracking-[-0.03em] text-gray-80">
             Home
@@ -42,11 +94,10 @@ function Home({ onOpenMenu }) {
           </button>
         </header>
 
-        {/* 상태 요약 영역 */}
         <section className="px-6 pt-[18px]">
           <div className="flex items-center justify-between">
             <p className="text-[16px] leading-[1.32] tracking-[-0.01em] text-gray-50">
-              14:42 update
+              {formatUpdateTime(reading.observed_at)}
             </p>
 
             {/* 더보기(옵션) 버튼: 점 3개 */}
@@ -60,50 +111,29 @@ function Home({ onOpenMenu }) {
           </div>
 
           <h2 className="mt-2 text-[26px] font-bold leading-[1.4] tracking-[-0.03em] text-gray-90">
-            가방 오른쪽에
-            <br />
-            형태 변화가 시작됐어요
+            {state?.headline ?? "가방 상태를 확인하고 있어요"}
           </h2>
 
           <p className="mt-2 text-[15px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-60">
-            높은 온도에 노출된 상태에서
-            <br />
-            내용물의 무게가 오른쪽에 집중되고 있어요.
+            {state?.description ?? ""}
           </p>
         </section>
 
-        {/* 가방 이미지 + 지표 배지 영역 */}
         <section className="relative mt-6 flex flex-1 flex-col items-center px-6">
-          {/* 가방 이미지 자리 (이미지는 비워두고 추후 채워질 예정) */}
           <div className="relative flex h-[300px] w-full max-w-[220px] items-center justify-center">
             <span className="text-[13px] text-gray-30">가방 이미지 영역</span>
 
-            {/* 우측 하중 배지 */}
-            <MetricBadge
-              label="우측 하중"
-              value="68%"
-              onClick={() => openMetric("rightLoad")}
-              className="absolute -right-6 top-10"
-            />
-
-            {/* 형태 편차 배지 */}
-            <MetricBadge
-              label="형태 편차"
-              value="7%"
-              onClick={() => openMetric("shapeDeviation")}
-              className="absolute -left-8 bottom-20"
-            />
-
-            {/* 현재 온도 배지 */}
-            <MetricBadge
-              label="현재 온도"
-              value="47°C"
-              onClick={() => openMetric("temperature")}
-              className="absolute -right-4 bottom-6"
-            />
+            {display_metrics.map((metric, index) => (
+              <MetricBadge
+                key={metric.key}
+                label={metric.label}
+                value={`${metric.value}${metric.unit}`}
+                onClick={() => openMetric(METRIC_KEY_TO_DRAWER_ID[metric.key])}
+                className={BADGE_POSITION_CLASSES[index]}
+              />
+            ))}
           </div>
 
-          {/* 제품명 */}
           <button
             type="button"
             className="mt-2 flex items-center gap-0.5 text-[14px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-70"
@@ -113,7 +143,6 @@ function Home({ onOpenMenu }) {
           </button>
         </section>
 
-        {/* 지금 필요한 케어 영역 */}
         <div className="px-6 pb-[55px] pt-4">
           <p className="mb-2 text-[13px] leading-[1.5] tracking-[-0.01em] text-gray-50">
             지금 필요한 케어
@@ -124,9 +153,7 @@ function Home({ onOpenMenu }) {
             className="flex w-full items-center justify-between gap-3 rounded-lg bg-gray-70 px-4 py-3.5 text-white"
           >
             <span className="text-[15px] font-bold leading-[1.4] tracking-[-0.01em]">
-              가방을 서늘한 곳으로 옮기고
-              <br />
-              내용물을 비워 주세요.
+              {state?.quick_care ?? "가방 상태를 확인해 주세요."}
             </span>
 
             <span className="flex shrink-0 items-center gap-0.5 text-[13px] font-medium leading-[1.5] tracking-[-0.01em] text-white/80">
@@ -141,7 +168,6 @@ function Home({ onOpenMenu }) {
         </div>
       </div>
 
-      {/* 지표를 클릭하면 아래에서 올라오는 그래프 바텀시트 */}
       <MetricDrawer metric={selectedMetric} onClose={closeMetric} />
     </main>
   );

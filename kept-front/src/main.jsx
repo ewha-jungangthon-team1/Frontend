@@ -6,8 +6,16 @@ import App from "./App.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
+<<<<<<< Updated upstream
     <BrowserRouter>
       <App />
     </BrowserRouter>
+=======
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </QueryClientProvider>
+>>>>>>> Stashed changes
   </StrictMode>,
 );
