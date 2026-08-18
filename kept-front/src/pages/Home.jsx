@@ -21,7 +21,7 @@ const BADGE_POSITION_CLASSES = [
 function HomeBackground() {
   return (
     <img
-      src="/images/2-care-red.png"
+      src="/images/1-homeimage.png"
       alt=""
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 h-full w-full object-cover"
@@ -100,30 +100,19 @@ function Home({ onOpenMenu }) {
             <p className="text-[16px] leading-[1.32] tracking-[-0.01em] text-gray-50">
               {formatUpdateTime(reading.observed_at)}
             </p>
-
-            {/* 더보기(옵션) 버튼: 점 3개 */}
-            <button
-              type="button"
-              aria-label="옵션 더보기"
-              className="text-[16px] leading-none tracking-[2px] text-gray-40"
-            >
-              ···
-            </button>
           </div>
 
-          <h2 className="mt-2 text-[26px] font-bold leading-[1.4] tracking-[-0.03em] text-gray-90">
+          <h2 className="mt-2 text-[28px] font-bold leading-[1.4] tracking-[-0.03em] text-gray-90">
             {state?.headline ?? "가방 상태를 확인하고 있어요"}
           </h2>
 
-          <p className="mt-2 text-[15px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-60">
+          <p className="mt-2 text-[18px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-60">
             {state?.description ?? ""}
           </p>
         </section>
 
         <section className="relative mt-6 flex flex-1 flex-col items-center px-6">
           <div className="relative flex h-[300px] w-full max-w-[220px] items-center justify-center">
-            <span className="text-[13px] text-gray-30">가방 이미지 영역</span>
-
             {displayMetrics.map((metric, index) => (
               <MetricBadge
                 key={metric.key}
@@ -135,35 +124,42 @@ function Home({ onOpenMenu }) {
             ))}
           </div>
 
-          <button
-            type="button"
-            className="mt-2 flex items-center gap-0.5 text-[14px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-70"
-          >
-            MCM Vela Visetos Sling Bag
-            <img src="/icons/right.svg" alt="" className="size-4" />
-          </button>
+          {/* <button
+              type="button"
+              className="mt-2 flex items-center gap-0.5 text-[14px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-70"
+            >
+              MCM Vela Visetos Sling Bag
+              <img src="/icons/right.svg" alt="" className="size-4" />
+            </button> */}
         </section>
-
         <div className="px-6 pb-[55px] pt-4">
-          <p className="mb-2 text-[13px] leading-[1.5] tracking-[-0.01em] text-gray-50">
+          <p className="mb-2 text-[14px] leading-[1.5] tracking-[-0.01em] text-gray-50">
             지금 필요한 케어
           </p>
 
           <Link
             to="/care"
-            className="flex w-full items-center justify-between gap-3 rounded-lg bg-gray-70 px-4 py-3.5 text-white"
+            className="flex w-full flex-col gap-3 rounded-lg bg-white px-4 py-3.5 text-gray-90"
           >
-            <span className="text-[15px] font-bold leading-[1.4] tracking-[-0.01em]">
+            {/*quick_care 값을 받아 안내 문구 표시 */}
+            <span className="text-[20px] font-regular leading-[1.4] tracking-[-0.01em]">
               {state?.quick_care ?? "가방 상태를 확인해 주세요."}
             </span>
 
-            <span className="flex shrink-0 items-center gap-0.5 text-[13px] font-medium leading-[1.5] tracking-[-0.01em] text-white/80">
+            <span className="flex shrink-0 items-center gap-0.5 self-end text-[13px] font-medium leading-[1.5] tracking-[-0.01em] text-main-1">
               케어 방법 보기
-              <img
-                src="/icons/right.svg"
-                alt=""
-                className="size-3 brightness-0 invert"
-              />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <path
+                  d="M15.632 12L10.884 3.03198L9.11597 3.96798L13.368 12L9.11597 20.032L10.884 20.968L15.632 12Z"
+                  fill="#892A17"
+                />
+              </svg>
             </span>
           </Link>
         </div>
