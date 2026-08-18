@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import useLiveSession from "./useLiveSession";
 
-// 그래프에 남겨둘 최근 기록 최대 개수 (디자인 목업과 동일하게 6개)
-const MAX_HISTORY_POINTS = 6;
+// 그래프 한 칸의 간격 (5분)
+const BUCKET_MS = 5 * 60 * 1000;
+// 그래프에 보여줄 칸 개수 (최근 30분 = 5분 × 6칸)
+const BUCKET_COUNT = 6;
 
 // presentation.display_metrics의 key → 화면에서 쓰는 지표 id 매핑
 // (Home.jsx, MetricDrawer 등 다른 곳에서도 이 id로 지표를 구분한다)
@@ -36,70 +38,99 @@ const METRIC_PRESENTATION = {
   },
 };
 
-// observed_at("2026-08-16T12:00:05+09:00") → "00:05"(분:초) 형태로 변환
-// 폴링 간격이 짧아 같은 "시:분" 안에 여러 점이 찍힐 수 있어서 초 단위까지 써야
-// 라벨이 겹치지 않는데, 그렇다고 "시:분:초"를 다 쓰면 x축이 붐비므로
-// (한 세션이 보통 시간을 안 넘긴다는 전제 하에) 시는 빼고 "분:초"만 표시한다
-function formatTime(isoString) {
-  if (!isoString) return "";
-  const date = new Date(isoString);
+// ms 타임스탬프 → "14:20" 형태로 변환
+function formatClock(ms) {
+  const date = new Date(ms);
+  const hh = String(date.getHours()).padStart(2, "0");
   const mm = String(date.getMinutes()).padStart(2, "0");
-  const ss = String(date.getSeconds()).padStart(2, "0");
-  return `${mm}:${ss}`;
-}
-
-// 그래프는 최소 2개의 점이 있어야 선을 그릴 수 있으므로,
-// 기록이 1개뿐일 때는 같은 값을 가진 점을 하나 앞에 채워 넣는다
-function padSinglePoint(points) {
-  if (points.length !== 1) return points;
-  return [{ time: "", value: points[0].value }, points[0]];
+  return `${hh}:${mm}`;
 }
 
 /**
- * 실시간 세션(useLiveSession)을 폴링하면서, 매번 새로 들어오는 reading을
- * 지표별 시계열 배열로 누적해서 그래프 바텀시트(MetricDrawer)가 바로 쓸 수
- * 있는 형태로 가공해주는 훅입니다.
+ * 실시간 세션(useLiveSession)을 2초마다 폴링하지만, 그래프에 반영되는 시점은
+ * "5분에 한 번"으로 분리한 훅입니다.
+ *
+ * - 폴링 자체(2초 간격)는 그대로 둡니다. 배지/실시간 수치는 여전히 매 폴링마다
+ *   최신값(reading)을 그대로 쓰면 되고, 이 훅도 값 조회 자체는 계속합니다.
+ * - 다만 그래프용 points 배열은 폴링될 때마다 새로 만들지 않고,
+ *   "committed(확정)" 상태로 따로 관리해서 5분에 한 번만 갱신합니다.
+ *   → 그래프가 2초마다 리렌더링/애니메이션되던 문제가 사라집니다.
+ *
+ * 동작 방식:
+ * 1) 이 지표를 처음 관측하는 순간 즉시 1번째 점을 확정(commit)한다.
+ *    (그래서 세션 시작 첫 5분 동안은 그래프에 점이 1개만 있다)
+ * 2) 그 후로 5분이 지날 때마다(폴링으로 시계를 체크) 그 시점의 최신 값을
+ *    새 점으로 확정해서 추가한다. → 점이 2개, 3개, ... 6개로 점점 늘어난다.
+ * 3) 6개가 다 차면, 그 다음 5분마다 가장 오래된 점이 빠지고 새 점이 오른쪽에
+ *    붙는 슬라이딩 윈도우가 된다 (= 항상 "최근 30분"만 보여준다).
  *
  * ⚠️ 현재 백엔드에는 "과거 기록 조회" 전용 API가 없고 latest-reading만 있어서,
- * 폴링될 때마다 들어오는 값을 프론트에서 직접 쌓아 그래프를 그립니다.
- * → 세션이 갓 시작되면 기록이 1~2개뿐이라 그래프가 납작하게 보일 수 있고,
- *   새로고침하면 지금까지 쌓인 기록은 초기화됩니다.
- * → 추후 "세션별 기록 목록"을 내려주는 API가 추가되면, 이 훅의 history 누적
- *   로직(useEffect + setHistory) 대신 그 API 응답을 그대로 points로 매핑하도록
- *   바꾸면 됩니다.
+ * 5분마다 폴링에서 얻은 "그 시점의 최신값"을 그대로 확정 값으로 씁니다.
+ * → 새로고침하면 지금까지 확정된 점들은 초기화됩니다.
+ * → 추후 "세션별 기록 목록"을 내려주는 API가 추가되면, committed 누적 로직 대신
+ *   그 API 응답을 그대로 points로 매핑하도록 바꾸면 됩니다.
  */
 function useBagMetrics(publicToken) {
   const { reading, isLoading, isError, error } = useLiveSession(publicToken);
 
-  // key(right_load_percent 등) → [{ time, value }] 누적 기록
-  const [history, setHistory] = useState({});
+  // key(right_load_percent 등) → { points: [{ time, value }], nextCommitAtMs }
+  const [committed, setCommitted] = useState({});
+
+  // 선택된 가방(publicToken)이 바뀌면 이전 세션의 확정 기록을 초기화한다
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCommitted({});
+  }, [publicToken]);
 
   useEffect(() => {
     const values = reading?.presentation?.values;
     if (!values) return;
 
-    const time = formatTime(reading.observed_at);
+    const timeMs = new Date(reading.observed_at).getTime();
 
-    // 매 폴링마다 "이전까지 쌓은 기록 + 이번에 새로 온 값"을 합쳐야 하므로
-    // (외부 폴링 데이터를 누적하는 것이라 렌더링 중 순수 계산으로 대체할 수 없음)
+    // 매 폴링마다 "5분이 지났는지" 확인해서, 지났을 때만 새 점을 확정해야 하므로
+    // (외부 폴링 데이터를 시간 기준으로 누적하는 것이라 렌더링 중 순수 계산으로 대체할 수 없음)
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setHistory((prevHistory) => {
-      const nextHistory = { ...prevHistory };
+    setCommitted((prevCommitted) => {
+      let changed = false;
+      const nextCommitted = { ...prevCommitted };
 
       Object.keys(METRIC_PRESENTATION).forEach((key) => {
         const value = values[key];
         if (value == null) return;
 
-        const list = prevHistory[key] ?? [];
+        const prevEntry = prevCommitted[key];
 
-        // 이 effect는 reading.sequence가 바뀔 때만 실행되므로(중복 호출 없음),
-        // 폴링될 때마다 항상 새 점을 추가하고 최근 MAX_HISTORY_POINTS개만 유지한다
-        nextHistory[key] = [...list, { time, value }].slice(
-          -MAX_HISTORY_POINTS,
-        );
+        // 이 지표를 처음 관측한 순간 → 즉시 1번째 점을 확정
+        if (!prevEntry) {
+          nextCommitted[key] = {
+            points: [{ time: formatClock(timeMs), value }],
+            nextCommitAtMs: timeMs + BUCKET_MS,
+          };
+          changed = true;
+          return;
+        }
+
+        // 아직 다음 5분 경계에 도달하지 않았으면 그대로 둔다(그래프 업데이트 없음)
+        if (timeMs < prevEntry.nextCommitAtMs) return;
+
+        // 5분 경계를 넘었으면(오래 자리를 비웠다가 돌아온 경우 여러 번일 수도 있음)
+        // 경계마다 그 시점의 최신 값으로 점을 하나씩 확정해서 따라잡는다
+        let points = prevEntry.points;
+        let nextCommitAtMs = prevEntry.nextCommitAtMs;
+        while (timeMs >= nextCommitAtMs) {
+          points = [
+            ...points,
+            { time: formatClock(nextCommitAtMs), value },
+          ].slice(-BUCKET_COUNT);
+          nextCommitAtMs += BUCKET_MS;
+        }
+
+        nextCommitted[key] = { points, nextCommitAtMs };
+        changed = true;
       });
 
-      return nextHistory;
+      return changed ? nextCommitted : prevCommitted;
     });
     // reading.sequence가 바뀔 때만(=새 데이터가 도착했을 때만) 실행
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,9 +147,12 @@ function useBagMetrics(publicToken) {
     const config = METRIC_PRESENTATION[metric.key];
     if (!config) return;
 
-    const points = padSinglePoint(
-      history[metric.key] ?? [{ time: "", value: metric.value }],
-    );
+    const points = committed[metric.key]?.points ?? [
+      {
+        time: formatClock(new Date(reading.observed_at).getTime()),
+        value: metric.value,
+      },
+    ];
 
     // 우측 하중은 "우측 68%" 처럼 우세한 쪽 방향을 함께 보여준다
     let displayValue = `${metric.value}${metric.unit}`;
