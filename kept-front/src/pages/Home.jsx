@@ -5,9 +5,7 @@ import useBagStore from "../store/bagStore";
 import MetricBadge from "../components/MetricBadge";
 import MetricDrawer from "../components/MetricDrawer";
 
-<<<<<<< Updated upstream
 // Care 화면과 동일한 경고 상태 배경(핑크 그라데이션)을 재사용
-=======
 // ⚠️ 테스트용 임시 토큰
 
 const TEMP_PUBLIC_TOKEN = "11111111-1111-1111-1111-111111111111";
@@ -27,7 +25,6 @@ const BADGE_POSITION_CLASSES = [
 ];
 
 // Care 화면과 동일한 배경
->>>>>>> Stashed changes
 function HomeBackground() {
   return (
     <img
