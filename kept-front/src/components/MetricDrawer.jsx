@@ -1,4 +1,5 @@
 import MetricGraph from "./MetricGraph";
+import LoadDistributionGraph from "./LoadDistributionGraph";
 
 // 지표 배지를 클릭했을 때 화면 아래에서 올라오는 그래프 바텀시트
 // metric이 없으면(null) 화면 아래로 숨겨진 상태를 유지한다
@@ -49,11 +50,11 @@ function MetricDrawer({ metric, onClose }) {
           {/* 그래프는 metric이 있을 때만 그린다 (닫혀 있을 때 불필요한 렌더링 방지) */}
           {metric && (
             <div className="mt-5">
-              <MetricGraph
-                points={metric.points}
-                yAxisLabels={metric.yAxisLabels}
-                unit={metric.unit}
-              />
+              {metric.type === "load" ? (
+                <LoadDistributionGraph points={metric.points} />
+              ) : (
+                <MetricGraph points={metric.points} />
+              )}
             </div>
           )}
 
@@ -61,7 +62,7 @@ function MetricDrawer({ metric, onClose }) {
             type="button"
             className="mt-5 flex items-center gap-0.5 text-[14px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-60"
           >
-            관련 기록 더 보기
+            {metric?.moreLabel ?? "관련 기록 더 보기"}
             <img src="/icons/right.svg" alt="" className="size-4" />
           </button>
 

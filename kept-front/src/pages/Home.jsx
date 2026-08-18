@@ -1,6 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router";
-import useBagStatus from "../hooks/useBagStatus";
-import useLiveSession from "../hooks/useLiveSession";
+import useBagMetrics, { METRIC_KEY_TO_ID } from "../hooks/useBagMetrics";
 import useBagStore from "../store/bagStore";
 import MetricBadge from "../components/MetricBadge";
 import MetricDrawer from "../components/MetricDrawer";
@@ -9,13 +9,6 @@ import MetricDrawer from "../components/MetricDrawer";
 // ⚠️ 테스트용 임시 토큰
 
 const TEMP_PUBLIC_TOKEN = "11111111-1111-1111-1111-111111111111";
-
-// display_metrics의 key → 기존 그래프 바텀시트(useBagStatus)의 id 매핑
-const METRIC_KEY_TO_DRAWER_ID = {
-  right_load_percent: "rightLoad",
-  shape_deviation_percent: "shapeDeviation",
-  temperature_c: "temperature",
-};
 
 // 배지가 가방 이미지 위 어디에 놓일지는 고정 (3번째 지표까지만 대응)
 const BADGE_POSITION_CLASSES = [
@@ -46,12 +39,25 @@ function formatUpdateTime(isoString) {
 }
 
 function Home({ onOpenMenu }) {
-  const { selectedMetric, openMetric, closeMetric } = useBagStatus();
+  // 그래프 바텀시트에 표시할 지표 id (없으면 닫힌 상태)
+  const [selectedMetricId, setSelectedMetricId] = useState(null);
+  const openMetric = (metricId) => setSelectedMetricId(metricId);
+  const closeMetric = () => setSelectedMetricId(null);
 
   const storedToken = useBagStore((state) => state.publicToken);
   const publicToken = storedToken ?? TEMP_PUBLIC_TOKEN;
 
-  const { reading, isLoading, isError, error } = useLiveSession(publicToken);
+  const {
+    reading,
+    state,
+    displayMetrics,
+    metricsById,
+    isLoading,
+    isError,
+    error,
+  } = useBagMetrics(publicToken);
+
+  const selectedMetric = metricsById[selectedMetricId] ?? null;
 
   if (isLoading) {
     return (
@@ -68,8 +74,6 @@ function Home({ onOpenMenu }) {
       </main>
     );
   }
-
-  const { state, display_metrics } = reading.presentation;
 
   return (
     <main className="relative mx-auto min-h-[852px] w-full max-w-[393px] overflow-hidden bg-white">
@@ -120,12 +124,12 @@ function Home({ onOpenMenu }) {
           <div className="relative flex h-[300px] w-full max-w-[220px] items-center justify-center">
             <span className="text-[13px] text-gray-30">가방 이미지 영역</span>
 
-            {display_metrics.map((metric, index) => (
+            {displayMetrics.map((metric, index) => (
               <MetricBadge
                 key={metric.key}
                 label={metric.label}
                 value={`${metric.value}${metric.unit}`}
-                onClick={() => openMetric(METRIC_KEY_TO_DRAWER_ID[metric.key])}
+                onClick={() => openMetric(METRIC_KEY_TO_ID[metric.key])}
                 className={BADGE_POSITION_CLASSES[index]}
               />
             ))}
