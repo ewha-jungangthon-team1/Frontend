@@ -7,9 +7,9 @@ function easeOutCubic(t) {
   return 1 - Math.pow(1 - t, 3);
 }
 
-// 그래프가 화면에 나타날 때 각 데이터 값이 0에서 실제 값까지
+// 그래프가 화면에 나타날 때 각 데이터 값이 시작 기준값에서 실제 값까지
 // 부드럽게 차오르는 것처럼 보이도록, 매 프레임 보간된 포인트 배열을 반환하는 훅
-function useGraphAnimation(points) {
+function useGraphAnimation(points, startValue = 0) {
   const [progress, setProgress] = useState(0);
   const frameIdRef = useRef(null);
 
@@ -38,12 +38,12 @@ function useGraphAnimation(points) {
         cancelAnimationFrame(frameIdRef.current);
       }
     };
-  }, [points]);
+  }, [points, startValue]);
 
-  // 0(진행 전) -> 실제 값(진행 완료) 사이를 보간한 포인트 배열
+  // 시작 기준값(진행 전) -> 실제 값(진행 완료) 사이를 보간한 포인트 배열
   return points.map((point) => ({
     ...point,
-    value: point.value * progress,
+    value: startValue + (point.value - startValue) * progress,
   }));
 }
 

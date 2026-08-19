@@ -5,59 +5,63 @@ import { USAGE_DATA_NOTICE } from "../hooks/useReportData";
 // Figma 스펙: 흰색 rounded-lg 카드 + 얇은 컬럼 구분선, 카드 사이 10px 간격
 function ReportUsageList({ records, onSelectRecord }) {
   return (
-    <div className="px-6 pb-[55px] pt-5">
+    <div className="px-6 pb-[55px] pt-2.5">
       <p className="text-[13px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-30">
         최근 7일
       </p>
 
       {/* 사용 기록 목록 */}
-      <ul className="mt-4 flex flex-col gap-2.5">
+      <ul className="mt-2.5 flex flex-col gap-2.5">
         {records.map((record) => (
           <li key={record.id}>
             <button
               type="button"
               onClick={() => onSelectRecord(record.id)}
-              className="w-full rounded-lg bg-white px-5 py-4 text-left"
+              className="h-[107px] w-full rounded-lg bg-white px-5 py-4 text-left"
             >
               <div className="flex items-start justify-between">
-                <p className="text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-gray-100">
+                <p className="font-['Apple_SD_Gothic_Neo'] text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-gray-100">
                   {record.date}
                 </p>
-                <img
-                  src="/icons/right.svg"
-                  alt=""
-                  className="size-6 shrink-0"
+                <span
+                  aria-hidden="true"
+                  className="size-6 shrink-0 bg-gray-50"
+                  style={{
+                    WebkitMask:
+                      "url('/icons/right.svg') center / contain no-repeat",
+                    mask: "url('/icons/right.svg') center / contain no-repeat",
+                  }}
                 />
               </div>
 
               <div className="mt-2.5 flex items-center">
-                <div className="flex flex-1 flex-col items-center gap-1">
+                <div className="flex flex-1 flex-col items-center">
                   <span className="text-[13px] font-light leading-[1.5] tracking-[-0.01em] text-gray-60">
                     하중
                   </span>
-                  <span className="text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-gray-90">
+                  <span className="font-['Apple_SD_Gothic_Neo'] text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-gray-90">
                     {record.loadKg}kg
                   </span>
                 </div>
 
                 <span className="h-11 w-px bg-gray-20" />
 
-                <div className="flex flex-1 flex-col items-center gap-1">
+                <div className="flex flex-1 flex-col items-center">
                   <span className="text-[13px] font-light leading-[1.5] tracking-[-0.01em] text-gray-60">
                     변형 누적
                   </span>
-                  <span className="text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-gray-90">
+                  <span className="font-['Apple_SD_Gothic_Neo'] text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-gray-90">
                     {record.deformationPercent}%
                   </span>
                 </div>
 
                 <span className="h-11 w-px bg-gray-20" />
 
-                <div className="flex flex-1 flex-col items-center gap-1">
+                <div className="flex flex-1 flex-col items-center">
                   <span className="text-[13px] font-light leading-[1.5] tracking-[-0.01em] text-gray-60">
                     수분 노출
                   </span>
-                  <span className="text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-gray-90">
+                  <span className="font-['Apple_SD_Gothic_Neo'] text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-gray-90">
                     {record.moistureDetected ? "노출" : "안전"}
                   </span>
                 </div>
@@ -74,7 +78,7 @@ function ReportUsageList({ records, onSelectRecord }) {
       )}
 
       {/* 안내 문구 */}
-      <p className="mt-5 text-center text-[13px] font-light leading-[1.6] tracking-[-0.01em] text-gray-30/70">
+      <p className="ml-2 mt-[86px] text-left text-[13px] font-light leading-[1.5] tracking-[-0.01em] text-gray-30/70">
         {USAGE_DATA_NOTICE[0]}
         <br />
         {USAGE_DATA_NOTICE[1]}

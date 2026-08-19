@@ -1,11 +1,17 @@
 import DetailHeader from "./DetailHeader";
-import { USAGE_DATA_NOTICE } from "../hooks/useReportData";
 
 // ⚠️ 평균하중 / 최대하중 관련 주의 (백엔드 문의
 // API의 daily_series에는 하루당 하중 값이 1개(load_kg)만 있어서
 // 그날의 평균/최대"라는 개념 자체가 없음, 현재 표시되는 항목은
 //   - 평균하중 → 그날의 실제 측정값(record.loadKg)
 //   - 최대하중 → 리포트 전체(7일) 중 최댓값(report.metrics.load.max_kg)
+function formatNumber(value) {
+  if (value == null || Number.isNaN(Number(value))) return "-";
+
+  return Number(value)
+    .toFixed(2)
+    .replace(/\.?0+$/, "");
+}
 
 function buildDetailRows(record, report) {
   const comparisonLoad = report?.comparison?.available
@@ -17,11 +23,11 @@ function buildDetailRows(record, report) {
       id: "average",
       icon: "/icons/bag_1.svg",
       label: "평균하중",
-      value: `${record.loadKg}kg`,
+      value: `${formatNumber(record.loadKg)}kg`,
       // "평소" 값: 지난 7일(이전 기간) 평균과 비교 (comparison.metrics.load 기준)
       caption:
         comparisonLoad?.previous != null
-          ? `평소 ${comparisonLoad.previous}kg`
+          ? `평소 ${formatNumber(comparisonLoad.previous)}kg`
           : null,
     },
     {
@@ -29,17 +35,17 @@ function buildDetailRows(record, report) {
       icon: "/icons/bag_2.svg",
       label: "최대하중",
       // TODO: 하루 단위 최댓값이 아니라 리포트(7일) 전체 최댓값입니다 (백엔드 확인 대기)
-      value: `${report.metrics.load.max_kg}kg`,
+      value: `${formatNumber(report.metrics.load.max_kg)}kg`,
       caption:
         comparisonLoad?.previous != null
-          ? `평소 ${comparisonLoad.previous}kg`
+          ? `평소 ${formatNumber(comparisonLoad.previous)}kg`
           : null,
     },
     {
       id: "deformation",
       icon: "/icons/pen.svg",
       label: "변형누적",
-      value: `${record.deformationPercent}%`,
+      value: `${formatNumber(record.deformationPercent)}%`,
       // 명확한 안전/위험 임계값이 API에 없어 판정 문구는 아직 표시하지 않습니다
       caption: null,
     },
@@ -87,9 +93,9 @@ function ReportUsageDetail({ record, report, onBack }) {
             상세지표
           </p>
 
-          <ul className="mt-3 flex flex-col gap-[18px]">
+          <ul className="mt-3 flex flex-col gap-[26px]">
             {detailRows.map((row) => (
-              <li key={row.id} className="flex items-center gap-3">
+              <li key={row.id} className="flex min-h-[36px] items-center gap-3">
                 <img src={row.icon} alt="" className="size-4 shrink-0" />
 
                 <span className="flex-1 text-[15px] font-light leading-[1.5] tracking-[-0.01em] text-gray-100">
@@ -122,13 +128,6 @@ function ReportUsageDetail({ record, report, onBack }) {
             </p>
           </div>
         )}
-
-        {/* 안내 문구 */}
-        <p className="mt-5 text-center text-[13px] font-light leading-[1.6] tracking-[-0.01em] text-gray-30/70">
-          {USAGE_DATA_NOTICE[0]}
-          <br />
-          {USAGE_DATA_NOTICE[1]}
-        </p>
       </div>
     </div>
   );

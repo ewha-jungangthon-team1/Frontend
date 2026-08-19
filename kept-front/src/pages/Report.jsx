@@ -46,28 +46,32 @@ function Report({ onOpenMenu }) {
 
   return (
     // Home / Care와 동일한 레이아웃 방식 (393px 폭 모바일 프레임, mx-auto로 중앙 정렬)
-    <main className="relative mx-auto min-h-dvh w-full max-w-[393px] overflow-hidden bg-white">
+    <main className="relative mx-auto h-dvh w-full max-w-[393px] overflow-hidden bg-white">
       <ReportBackground />
 
-      <div className="relative z-10 flex min-h-dvh flex-col">
+      <div className="relative z-10 flex h-full min-h-0 flex-col">
         {selectedRecord ? (
           // 사용기록 상세(3.2.2): 탭 내비바 대신 뒤로가기 헤더를 보여준다
-          <ReportUsageDetail
-            record={selectedRecord}
-            report={report}
-            onBack={closeUsageDetail}
-          />
+          <div className="h-full overflow-y-auto overscroll-contain touch-pan-y">
+            <ReportUsageDetail
+              record={selectedRecord}
+              report={report}
+              onBack={closeUsageDetail}
+            />
+          </div>
         ) : (
           <>
             {/* 공통 내비바: 제목 + 메뉴 + 탭(최근/사용 기록/형태 분석) */}
-            <ReportNavBar
-              activeTab={activeTab}
-              onChangeTab={changeTab}
-              onOpenMenu={onOpenMenu}
-            />
+            <div className="shrink-0">
+              <ReportNavBar
+                activeTab={activeTab}
+                onChangeTab={changeTab}
+                onOpenMenu={onOpenMenu}
+              />
+            </div>
 
-            {/* 탭별 콘텐츠 영역 */}
-            <div className="flex-1">
+            {/* 배경은 고정하고 탭별 카드·문구 영역만 스크롤한다 */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y">
               {isLoading && (
                 <p className="px-6 pt-10 text-center text-[13px] text-gray-40">
                   리포트를 불러오고 있어요...
