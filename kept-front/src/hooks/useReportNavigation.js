@@ -1,10 +1,10 @@
 import { useState } from "react";
 
-// 리포트 화면 상단 탭 목록
+// 리포트 화면 상단 탭 목록 (Figma 세그먼트 컨트롤 문구 기준)
 export const REPORT_TABS = [
   { id: "recent", label: "최근" },
-  { id: "history", label: "사용기록" },
-  { id: "pattern", label: "패턴분석" },
+  { id: "history", label: "사용 기록" },
+  { id: "pattern", label: "형태 분석" },
 ];
 
 // 리포트 화면의 탭 전환과, 사용기록 목록 -> 상세 화면 이동 상태를 함께 관리하는 훅

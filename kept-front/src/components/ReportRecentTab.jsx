@@ -1,59 +1,80 @@
+import { useState } from "react";
 import MetricGraph from "./MetricGraph";
+import { RECENT_CHART_TABS } from "../hooks/useReportData";
 
 // 리포트 '최근' 탭 (3.1 최근 리포트)
-// 최근 7일 요약 문구 + 대표 그래프 + 주요 지표 카드를 보여준다
+// AI 요약 헤드라인 + 하중/형태/환경 서브탭 그래프 + 최근 사용 기록(2x2) 카드를 보여준다
 function ReportRecentTab({ summary }) {
+  const [activeChart, setActiveChart] = useState(RECENT_CHART_TABS[0].id);
+
+  const chart = summary.charts[activeChart];
+
   return (
     <div className="px-6 pb-[55px] pt-5">
-      <p className="text-[13px] leading-[1.5] tracking-[-0.01em] text-gray-50">
-        {summary.updatedAt}
+      <p className="text-[13px] leading-[1.5] tracking-[-0.01em] text-gray-30">
+        최근 7일 요약
       </p>
 
-      <h2 className="mt-2 text-[22px] font-bold leading-[1.4] tracking-[-0.03em] text-gray-90">
+      <h2 className="mt-2 text-[18px] font-bold leading-[1.5] tracking-[-0.03em] text-gray-90">
         {summary.headline}
-        <br />
-        {summary.highlight}
       </h2>
 
-      <p className="mt-2 text-[14px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-60">
-        {summary.description}
-      </p>
+      {/* 하중 / 형태 / 환경 서브탭 */}
+      <div className="mt-5 flex gap-1">
+        {RECENT_CHART_TABS.map((tab) => {
+          const isActive = tab.id === activeChart;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveChart(tab.id)}
+              className={`relative px-2.5 py-1.5 text-[14px] leading-[1.5] tracking-[-0.01em] ${
+                isActive
+                  ? "border-b border-gray-90 font-medium text-gray-90"
+                  : "font-light text-gray-50"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-      {/* 최근 7일 대표 그래프 (홈 화면과 같은 온도 데이터를 재사용) */}
-      <div className="mt-6 rounded-2xl bg-gray-5 p-5">
-        <p className="text-[13px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-50">
-          {summary.graphMetric.drawerTitle}
+      {/* 선택된 서브탭의 최근 7일 추이 그래프 */}
+      <div className="mt-4">
+        <p className="text-[24px] font-bold leading-[1.32] tracking-[-0.03em] text-gray-90">
+          {chart.latestDisplayValue}
         </p>
 
-        <p className="mt-1 text-[24px] font-bold leading-[1.32] tracking-[-0.03em] text-gray-90">
-          {summary.graphMetric.displayValue}
-        </p>
-
-        <div className="mt-4">
-          <MetricGraph
-            points={summary.graphMetric.points}
-            yAxisLabels={summary.graphMetric.yAxisLabels}
-            unit={summary.graphMetric.unit}
-          />
+        <div className="mt-3">
+          {chart.points.length > 0 ? (
+            <MetricGraph points={chart.points} />
+          ) : (
+            <p className="py-10 text-center text-[13px] text-gray-40">
+              표시할 데이터가 없어요
+            </p>
+          )}
         </div>
       </div>
 
-      {/* 최근 사용 기록 요약 카드 */}
+      {/* 최근 사용 기록 요약 카드 (2x2) */}
       <div className="mt-6">
-        <p className="text-[15px] font-bold leading-[1.5] tracking-[-0.01em] text-gray-90">
+        <p className="text-[13px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-30">
           최근 사용 기록
         </p>
 
-        <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {summary.stats.map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-xl bg-gray-5 px-3 py-4 text-center"
-            >
-              <p className="text-[12px] leading-[1.5] tracking-[-0.01em] text-gray-50">
+            <div key={stat.label} className="rounded-lg bg-gray-5 px-4 py-3">
+              <p className="text-[13px] leading-[1.5] tracking-[-0.01em] text-gray-90">
                 {stat.label}
+                {stat.sublabel && (
+                  <span className="ml-1 text-[13px] text-black/50">
+                    {stat.sublabel}
+                  </span>
+                )}
               </p>
-              <p className="mt-1 text-[16px] font-bold leading-[1.4] tracking-[-0.01em] text-gray-90">
+              <p className="mt-1 text-[22px] font-bold leading-[1.5] tracking-[-0.03em] text-gray-100">
                 {stat.value}
               </p>
             </div>

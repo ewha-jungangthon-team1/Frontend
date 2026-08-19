@@ -1,14 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import useBagMetrics, { METRIC_KEY_TO_ID } from "../hooks/useBagMetrics";
-import useBagStore from "../store/bagStore";
+import useBagStore, { TEMP_PUBLIC_TOKEN } from "../store/bagStore";
 import MetricBadge from "../components/MetricBadge";
 import MetricDrawer from "../components/MetricDrawer";
 
 // Care 화면과 동일한 경고 상태 배경(핑크 그라데이션)을 재사용
-// ⚠️ 테스트용 임시 토큰
-
-const TEMP_PUBLIC_TOKEN = "11111111-1111-1111-1111-111111111111";
 
 // 배지가 가방 이미지 위 어디에 놓일지는 고정 (3번째 지표까지만 대응)
 const BADGE_POSITION_CLASSES = [

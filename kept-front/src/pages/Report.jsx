@@ -17,8 +17,16 @@ function Report({ onOpenMenu }) {
     closeUsageDetail,
   } = useReportNavigation();
 
-  // 리포트에서 사용하는 데이터 (홈 화면 지표를 재사용)
-  const { recentSummary, usageRecords, patternInsight } = useReportData();
+  // GET /api/bags/{token}/reports/latest/ 하나로 리포트 화면 전체를 구성한다
+  const {
+    isLoading,
+    isError,
+    isEmpty,
+    report,
+    recentSummary,
+    usageRecords,
+    patternInsight,
+  } = useReportData();
 
   // 사용기록 탭에서 선택된 날짜의 상세 기록
   const selectedRecord = usageRecords.find(
@@ -33,11 +41,12 @@ function Report({ onOpenMenu }) {
           // 사용기록 상세(3.2.2): 탭 내비바 대신 뒤로가기 헤더를 보여준다
           <ReportUsageDetail
             record={selectedRecord}
+            careComment={report?.ai_result?.content?.care_comment}
             onBack={closeUsageDetail}
           />
         ) : (
           <>
-            {/* 공통 내비바: 제목 + 메뉴 + 탭(최근/사용기록/패턴분석) */}
+            {/* 공통 내비바: 제목 + 메뉴 + 탭(최근/사용 기록/형태 분석) */}
             <ReportNavBar
               activeTab={activeTab}
               onChangeTab={changeTab}
@@ -46,19 +55,45 @@ function Report({ onOpenMenu }) {
 
             {/* 탭별 콘텐츠 영역 (스크롤 가능) */}
             <div className="flex-1 overflow-y-auto">
-              {activeTab === "recent" && (
-                <ReportRecentTab summary={recentSummary} />
+              {isLoading && (
+                <p className="px-6 pt-10 text-center text-[13px] text-gray-40">
+                  리포트를 불러오고 있어요...
+                </p>
               )}
 
-              {activeTab === "history" && (
-                <ReportUsageList
-                  records={usageRecords}
-                  onSelectRecord={openUsageDetail}
-                />
+              {isEmpty && !isLoading && (
+                <p className="px-6 pt-10 text-center text-[13px] leading-[1.6] text-gray-40">
+                  아직 완료된 리포트가 없어요.
+                  <br />
+                  가방을 사용하면 리포트가 생성돼요.
+                </p>
               )}
 
-              {activeTab === "pattern" && (
-                <ReportPatternTab insight={patternInsight} />
+              {isError && !isLoading && (
+                <p className="px-6 pt-10 text-center text-[13px] leading-[1.6] text-gray-40">
+                  리포트를 불러오지 못했어요.
+                  <br />
+                  잠시 후 다시 시도해 주세요.
+                </p>
+              )}
+
+              {report && (
+                <>
+                  {activeTab === "recent" && (
+                    <ReportRecentTab summary={recentSummary} />
+                  )}
+
+                  {activeTab === "history" && (
+                    <ReportUsageList
+                      records={usageRecords}
+                      onSelectRecord={openUsageDetail}
+                    />
+                  )}
+
+                  {activeTab === "pattern" && (
+                    <ReportPatternTab insight={patternInsight} />
+                  )}
+                </>
               )}
             </div>
           </>

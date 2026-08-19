@@ -1,69 +1,6 @@
-import { BAG_METRICS } from "./useBagStatus";
-
-// 홈 화면 지표(BAG_METRICS)를 id로 바로 찾아 쓰기 위한 매핑
-const metricById = Object.fromEntries(
-  BAG_METRICS.map((metric) => [metric.id, metric]),
-);
-
-// 3.1 최근 리포트 요약 데이터
-// 그래프는 홈 화면과 동일한 온도 데이터(useBagStatus)를 그대로 재사용한다
-const RECENT_SUMMARY = {
-  updatedAt: "09.14(일) 기준",
-  headline: "최근 7일 온도 평균 유지 시간이",
-  highlight: "평균보다 5% 부족했어요",
-  description:
-    "높은 온도에 노출된 시간이 늘면서 소재 회복에 필요한 시간이 부족했어요.",
-  graphMetric: metricById.temperature,
-  // 최근 7일 요약 카드: 홈 화면 지표 값을 그대로 재사용
-  stats: [
-    { label: "현재 온도", value: metricById.temperature.displayValue },
-    { label: "우측 하중", value: metricById.rightLoad.displayValue },
-    { label: "형태 편차", value: metricById.shapeDeviation.displayValue },
-  ],
-};
-
-// 지표의 시간대별 값에 비율을 곱해 새로운 더미 기록을 만든다
-// (실제로는 기록마다 다른 값이 있겠지만, 지금은 홈 화면 데이터를 재사용해 만든 값)
-function scalePoints(metric, ratio) {
-  const points = metric.points.map((point) => ({
-    ...point,
-    value: Math.round(point.value * ratio),
-  }));
-
-  // 마지막 값에 맞춰 표시용 값과 y축 눈금도 함께 조정한다
-  const lastValue = points[points.length - 1].value;
-
-  return {
-    ...metric,
-    points,
-    displayValue: `${lastValue}${metric.unit}`,
-    yAxisLabels: metric.yAxisLabels.map((label) => Math.round(label * ratio)),
-  };
-}
-
-// 3.2.1 사용 기록 목록 (최신순)
-// 각 기록은 홈 화면과 같은 3개 지표(온도 / 우측 하중 / 형태 편차) 데이터를 담고 있고
-// 3.2.2 상세 화면에서는 이 metrics 값으로 그래프를 그린다
-const USAGE_RECORDS = [
-  {
-    id: "usage-0914",
-    date: "09.14(일)",
-    timeRange: "12:40 - 17:00",
-    metrics: BAG_METRICS,
-  },
-  {
-    id: "usage-0910",
-    date: "09.10(수)",
-    timeRange: "09:20 - 14:10",
-    metrics: BAG_METRICS.map((metric) => scalePoints(metric, 0.8)),
-  },
-  {
-    id: "usage-0905",
-    date: "09.05(금)",
-    timeRange: "18:00 - 21:30",
-    metrics: BAG_METRICS.map((metric) => scalePoints(metric, 0.5)),
-  },
-];
+import { useQuery } from "@tanstack/react-query";
+import { getLatestReport } from "../api/report";
+import useBagStore, { TEMP_PUBLIC_TOKEN } from "../store/bagStore";
 
 // 사용 기록 목록/상세 화면 하단에 공통으로 보여주는 안내 문구
 export const USAGE_DATA_NOTICE = [
@@ -71,47 +8,184 @@ export const USAGE_DATA_NOTICE = [
   "미사용 기간은 데이터에 포함되지 않습니다",
 ];
 
-// 3.3 AI 사용 패턴 분석 데이터
-// changeText의 방향(direction)은 홈 화면 지표와 같은 id를 기준으로 연결된다
-const PATTERN_INSIGHT = {
-  headline: "최근 사용 기록을 분석했어요",
-  description:
-    "스마트소재가 감지한 최근 데이터를 바탕으로 반복되는 사용 패턴을 알려드려요.",
-  changes: [
-    {
-      id: "temperature",
-      label: "평균 온도 노출",
-      changeText: "+8%p",
-      direction: "up",
-      description: "지난주보다 높은 온도에 노출되는 시간이 늘었어요.",
-    },
-    {
-      id: "rightLoad",
-      label: "우측 하중 편중",
-      changeText: "+12%p",
-      direction: "up",
-      description: "오른쪽으로 무게가 쏠리는 습관이 반복되고 있어요.",
-    },
-    {
-      id: "shapeDeviation",
-      label: "형태 편차",
-      changeText: "-3%p",
-      direction: "down",
-      description: "형태 변형은 지난주보다 개선됐어요.",
-    },
-  ],
-  cautions: [
-    "무거운 물건은 가방 중앙에 담아 하중을 분산해 주세요.",
-    "장시간 고온 환경에 두지 않도록 주의해 주세요.",
-  ],
-};
+// 3.1 최근 탭의 하중/형태/환경 서브탭 정의
+// chart 배열의 어떤 필드를 그래프에 그릴지, 단위는 무엇인지 여기서 관리한다
+export const RECENT_CHART_TABS = [
+  {
+    id: "load",
+    label: "하중",
+    chartKey: "load",
+    valueKey: "total_load_kg",
+    unit: "kg",
+  },
+  {
+    id: "shape",
+    label: "형태",
+    chartKey: "shape",
+    valueKey: "shape_deviation_percent",
+    unit: "%",
+  },
+  {
+    id: "environment",
+    label: "환경",
+    chartKey: "environment",
+    valueKey: "temperature_c",
+    unit: "°C",
+  },
+];
+
+// {display_date: "2026-08-09"} → 그래프 x축에 쓰는 짧은 라벨 "08.09"
+function toShortLabel(displayDate) {
+  if (!displayDate) return "";
+  const [, month, day] = displayDate.split("-");
+  return month && day ? `${month}.${day}` : displayDate;
+}
+
+// 소수를 퍼센트 문자열로: 0.0109 → "1.1%"
+function toPercent(ratio, digits = 1) {
+  if (ratio === null || ratio === undefined) return null;
+  return `${(ratio * 100).toFixed(digits)}%`;
+}
 
 // 리포트 화면 전체에서 사용하는 데이터를 반환하는 훅
+// Report 화면(최근/사용기록/사용기록상세/형태분석)은 이 훅 하나가 감싸는
+// GET /api/bags/{token}/reports/latest/ 응답만으로 전부 구성된다
 function useReportData() {
+  const storedToken = useBagStore((state) => state.publicToken);
+  // Home.jsx와 동일하게, 아직 가방을 선택하지 않았다면 임시 토큰으로 폴백한다
+  const publicToken = storedToken ?? TEMP_PUBLIC_TOKEN;
+
+  const query = useQuery({
+    queryKey: ["report", "latest", publicToken],
+    queryFn: () => getLatestReport(publicToken),
+    enabled: !!publicToken,
+    // 404(아직 리포트 없음)는 재시도해도 결과가 바뀌지 않으므로 재시도하지 않는다
+    retry: (failureCount, error) => error?.status !== 404 && failureCount < 2,
+  });
+
+  const report = query.data;
+  const isNotFound = query.isError && query.error?.status === 404;
+
+  // ── 3.1 최근 탭에서 쓰기 좋은 형태로 가공 ────────────────────────
+  const recentSummary = report
+    ? {
+        periodLabel: `${report.display_period.start_date} ~ ${report.display_period.end_date}`,
+        // AI 요약이 아직 없을 수 있으므로(ai_result === {}) 항상 폴백 문구를 둔다
+        headline:
+          report.ai_result?.content?.weekly_summary ??
+          "최근 7일 사용 기록을 정리하고 있어요.",
+        stats: [
+          {
+            label: "평균하중",
+            value:
+              report.metrics.load.average_kg != null
+                ? `${report.metrics.load.average_kg}kg`
+                : "-",
+          },
+          {
+            label: "최대하중",
+            value:
+              report.metrics.load.max_kg != null
+                ? `${report.metrics.load.max_kg}kg`
+                : "-",
+          },
+          {
+            label: "과부하 발생 횟수",
+            sublabel: "(하중 초과)",
+            value:
+              report.metrics.load.overload_detected_days != null
+                ? `${report.metrics.load.overload_detected_days}회`
+                : "-",
+          },
+          {
+            label: "변형 누적량",
+            value: toPercent(report.metrics.deformation.max_ratio) ?? "-",
+          },
+        ],
+        // 하중/형태/환경 서브탭 각각의 그래프 데이터
+        charts: Object.fromEntries(
+          RECENT_CHART_TABS.map((tab) => {
+            const points = (report.charts[tab.chartKey] ?? []).map((point) => ({
+              time: toShortLabel(point.display_date),
+              value: point[tab.valueKey] ?? 0,
+            }));
+            const latest = points[points.length - 1];
+
+            return [
+              tab.id,
+              {
+                points,
+                unit: tab.unit,
+                latestDisplayValue: latest ? `${latest.value}${tab.unit}` : "-",
+              },
+            ];
+          }),
+        ),
+      }
+    : null;
+
+  // ── 3.2.1 사용 기록 목록: metrics.daily_series 그대로 사용 ──────────
+  const usageRecords = report
+    ? report.metrics.daily_series.map((day) => ({
+        // daily_series에는 별도 id가 없어 date를 고유 키로 사용한다
+        id: day.date,
+        date: day.display_date,
+        loadKg: day.load_kg,
+        deformationPercent: day.deformation_percent,
+        moistureDetected: day.moisture_detected,
+        presentation: day.presentation,
+      }))
+    : [];
+
+  // ── 3.3 형태 분석(패턴) 탭 ───────────────────────────────────────
+  const comparisonMetrics = report?.comparison?.available
+    ? report.comparison.metrics
+    : null;
+
+  const patternInsight = report
+    ? {
+        // ai_result가 {}(빈 객체)일 수 있으므로 폴백 문구를 둔다
+        headline: report.ai_result?.content
+          ? "최근 사용 기록을 분석했어요"
+          : "AI 분석을 준비하고 있어요",
+        description:
+          report.ai_result?.content?.pattern_insight ??
+          "리포트가 조금 더 쌓이면 사용 패턴을 알려드릴게요.",
+        comparisonAvailable: !!report.comparison?.available,
+        comparisonReason: report.comparison?.reason ?? null,
+        changes: comparisonMetrics
+          ? [
+              {
+                id: "loadBias",
+                label: "하중 편중",
+                metric: comparisonMetrics.load_bias?.max_absolute,
+              },
+              {
+                id: "overload",
+                label: "과부하 발생 횟수",
+                metric: comparisonMetrics.load?.overload_detected_days,
+              },
+              {
+                id: "deformation",
+                label: "변형 누적량",
+                metric: comparisonMetrics.deformation?.max_ratio,
+              },
+            ].filter((change) => change.metric)
+          : [],
+        // priority_actions는 최대 2개 문자열
+        cautions: report.ai_result?.content?.priority_actions ?? [],
+      }
+    : null;
+
   return {
-    recentSummary: RECENT_SUMMARY,
-    usageRecords: USAGE_RECORDS,
-    patternInsight: PATTERN_INSIGHT,
+    isLoading: query.isLoading,
+    isError: query.isError && !isNotFound,
+    isEmpty: isNotFound,
+    error: query.error,
+    report,
+    recentSummary,
+    usageRecords,
+    patternInsight,
   };
 }
 
