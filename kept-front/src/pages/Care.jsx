@@ -1,6 +1,7 @@
-import { Link } from "react-router";
+import { useNavigate } from "react-router";
 import useBagStore from "../store/bagStore";
 import useLiveSession from "../hooks/useLiveSession";
+import useDetailedCare from "../hooks/useDetailedCare";
 
 const CARE_BACKGROUND_BY_COLOR = {
   red: "/images/2-care-red.png",
@@ -54,13 +55,32 @@ function CareBackground({ themeKey }) {
 }
 
 function Care({ onOpenMenu }) {
+  const navigate = useNavigate();
   const publicToken = useBagStore((state) => state.publicToken);
 
-  const { reading, isLoading, isError, error } = useLiveSession(publicToken);
+  const { session, reading, isLoading, isError, error } =
+    useLiveSession(publicToken);
+
+  const detailedCareMutation = useDetailedCare();
 
   const presentation = reading?.presentation;
   const careState = presentation?.state;
   const displayMetrics = presentation?.display_metrics ?? [];
+
+  const handleOpenDetailedCare = () => {
+    if (!session?.session_id) return;
+
+    detailedCareMutation.mutate(session.session_id, {
+      onSuccess: (careResult) => {
+        navigate("/care/personal", {
+          state: {
+            careResult,
+            themeKey: careState?.theme_key,
+          },
+        });
+      },
+    });
+  };
 
   if (!publicToken) {
     return (
@@ -141,12 +161,23 @@ function Care({ onOpenMenu }) {
 
         {/*하단 버튼 영역*/}
         <div className="mt-auto px-6 pb-[55px]">
-          <Link
-            to="/care/personal"
-            className="flex w-full items-center justify-center rounded-lg bg-gray-70 px-3 py-2.5 text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-white"
+          <button
+            type="button"
+            onClick={handleOpenDetailedCare}
+            disabled={!session?.session_id || detailedCareMutation.isPending}
+            className="flex w-full items-center justify-center rounded-lg bg-gray-70 px-3 py-2.5 text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            전체 케어 방법 보기
-          </Link>
+            {detailedCareMutation.isPending
+              ? "케어 방법 만드는 중..."
+              : "전체 케어 방법 보기"}
+          </button>
+
+          {detailedCareMutation.isError && (
+            <p className="mt-2 text-center text-[13px] text-red-500">
+              {detailedCareMutation.error?.message ??
+                "상세 케어 정보를 불러오지 못했어요."}
+            </p>
+          )}
         </div>
       </div>
     </main>

@@ -1,59 +1,43 @@
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
+import useVerticalMouseDrag from "../hooks/useVerticalMouseDrag";
 
-const CARE_STEPS = [
-  {
-    number: "01",
-    title: "가방을 서늘한 곳으로 옮겨 주세요.",
-    description: "높은 온도에 오래 노출돼\n먼저 열을 식혀 주세요.",
-    details: [
-      {
-        label: "어떻게",
-        content: "직사광선을 피하고 통풍이 되는 실내에 두어 주세요.",
-      },
-      {
-        label: "언제까지",
-        content: "가방의 온도가 안정될 때까지 유지해 주세요.",
-      },
-    ],
-  },
+const PERSONAL_CARE_BACKGROUND_BY_COLOR = {
+  red: "/images/2-1.personalcare-red.png",
+  yellow: "/images/2-1.personalcare-yellow.png",
+  blue: "/images/2-1.personalcare-blue.png",
+};
 
-  {
-    number: "02",
-    title: "내용물을 비워 주세요.",
-    description:
-      "오른쪽에 무게가 집중돼 있어\n가방에 실리는 하중을 줄여 주세요.",
-    details: [
-      {
-        label: "어떻게",
-        content:
-          "내용물을 모두 꺼내고, 한쪽 면에 무게가 남지 않도록\n정리해 주세요.",
-      },
-      {
-        label: "피해주세요",
-        content:
-          "형태가 안정되기 전에는 무거운 물건을\n다시 넣지 않는 것이 좋아요.",
-      },
-    ],
-  },
-  {
-    number: "03",
-    title: "오른쪽 형태가 눌리지 않도록\n안정적으로 보관해 주세요.",
-    description:
-      "형태 변화가 더 커지지 않도록\n원래 형태가 유지되는 자세로 두는 것이 좋아요.",
-    details: [
-      {
-        label: "어떻게",
-        content:
-          "오른쪽 면이 다른 물건이나 벽에 눌리지 않도록\n공간을 두고 세워 주세요.",
-      },
-      {
-        label: "보관할 때",
-        content: "가방의 형태를 유지할 수 있도록 안정된 곳에\n두어 주세요.",
-      },
-    ],
-  },
-];
+function getPersonalCareBackgroundColor(themeKey = "") {
+  const normalizedThemeKey = themeKey.toLowerCase();
+
+  if (
+    normalizedThemeKey.includes("humidity") ||
+    normalizedThemeKey.includes("moisture") ||
+    normalizedThemeKey.includes("water")
+  ) {
+    return "blue";
+  }
+
+  if (
+    normalizedThemeKey.includes("load") ||
+    normalizedThemeKey.includes("shape") ||
+    normalizedThemeKey.includes("deformation")
+  ) {
+    return "yellow";
+  }
+
+  return "red";
+}
+
+function normalizeCareSteps(steps = []) {
+  return steps.map((step) => ({
+    number: String(step.step).padStart(2, "0"),
+    title: step.title,
+    description: step.description,
+    details: step.details ?? [],
+  }));
+}
 
 const SCENE_POSITION_CLASSES = [
   "pt-[154px]",
@@ -61,13 +45,13 @@ const SCENE_POSITION_CLASSES = [
   "-translate-y-[71px]",
 ];
 
-function CareScene({ activeIndex, isVisible }) {
+function CareScene({ activeIndex, isVisible, careSteps }) {
   return (
     <section
       className={`h-dvh pl-8 pr-[22px] ${SCENE_POSITION_CLASSES[activeIndex]}`}
     >
       <ol className="flex flex-col gap-2">
-        {CARE_STEPS.map((step, index) => (
+        {careSteps.map((step, index) => (
           <CareStep
             key={step.number}
             step={step}
@@ -140,14 +124,41 @@ function CareStep({ step, isActive, isSceneVisible }) {
 }
 
 function PersonalCare() {
+  const { state } = useLocation();
   const [activeIndex, setActiveIndex] = useState(0);
+  const mouseDragProps = useVerticalMouseDrag();
+
+  const careSteps = normalizeCareSteps(state?.careResult?.care?.steps);
+
+  const backgroundColor = getPersonalCareBackgroundColor(state?.themeKey);
+
+  const backgroundImage = PERSONAL_CARE_BACKGROUND_BY_COLOR[backgroundColor];
+
+  if (careSteps.length === 0) {
+    return (
+      <main className="relative mx-auto flex h-dvh w-full max-w-[393px] items-center justify-center bg-white px-6 text-center">
+        <div>
+          <p className="text-[15px] text-gray-60">
+            불러온 상세 케어 정보가 없어요.
+          </p>
+
+          <Link
+            to="/care"
+            className="mt-4 inline-flex rounded-lg bg-gray-70 px-4 py-2.5 text-[15px] font-bold text-white"
+          >
+            Care 화면으로 돌아가기
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   const handleScroll = (event) => {
     const { scrollTop, clientHeight } = event.currentTarget;
 
     const nextIndex = Math.round(scrollTop / clientHeight);
 
-    const safeIndex = Math.min(CARE_STEPS.length - 1, Math.max(0, nextIndex));
+    const safeIndex = Math.min(careSteps.length - 1, Math.max(0, nextIndex));
 
     setActiveIndex(safeIndex);
   };
@@ -160,7 +171,7 @@ function PersonalCare() {
         className="pointer-events-none absolute inset-0 overflow-hidden"
       >
         <img
-          src="/images/2-1.personalcare-red.png"
+          src={backgroundImage}
           alt=""
           className="absolute inset-0 h-full w-full object-cover object-top"
         />
@@ -179,12 +190,14 @@ function PersonalCare() {
 
       {/* 스크롤 감지 영역 */}
       <div
-        className="relative z-10 h-dvh snap-y snap-mandatory overflow-y-auto"
+        {...mouseDragProps}
+        className="relative z-10 h-dvh cursor-grab select-none snap-y snap-mandatory overflow-y-auto active:cursor-grabbing"
         onScroll={handleScroll}
+        onDragStart={(event) => event.preventDefault()}
       >
         {/* 화면에 고정되는 콘텐츠 */}
         <div className="sticky top-0 h-dvh">
-          {CARE_STEPS.map((step, index) => {
+          {careSteps.map((step, index) => {
             const isActive = index === activeIndex;
 
             return (
@@ -195,7 +208,11 @@ function PersonalCare() {
                   isActive ? "opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
-                <CareScene activeIndex={index} isVisible={isActive} />
+                <CareScene
+                  activeIndex={index}
+                  isVisible={isActive}
+                  careSteps={careSteps}
+                />
               </div>
             );
           })}
@@ -203,7 +220,7 @@ function PersonalCare() {
 
         {/* 실제 스크롤 높이를 만드는 투명 영역 */}
         <div className="-mt-[100dvh]">
-          {CARE_STEPS.map((step) => (
+          {careSteps.map((step) => (
             <div
               key={step.number}
               aria-hidden="true"
@@ -215,7 +232,7 @@ function PersonalCare() {
 
       {/* 하단 안내 영역 */}
       <div className="pointer-events-none absolute inset-0 z-20">
-        {activeIndex < CARE_STEPS.length - 1 ? (
+        {activeIndex < careSteps.length - 1 ? (
           <img
             src="/icons/down-arrow.svg"
             alt=""
