@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import useBagMetrics, { METRIC_KEY_TO_ID } from "../hooks/useBagMetrics";
-import useBagStore, { TEMP_PUBLIC_TOKEN } from "../store/bagStore";
+import useBagStore from "../store/bagStore";
 import MetricBadge from "../components/MetricBadge";
 import MetricDrawer from "../components/MetricDrawer";
 
@@ -41,8 +41,7 @@ function Home({ onOpenMenu }) {
   const openMetric = (metricId) => setSelectedMetricId(metricId);
   const closeMetric = () => setSelectedMetricId(null);
 
-  const storedToken = useBagStore((state) => state.publicToken);
-  const publicToken = storedToken ?? TEMP_PUBLIC_TOKEN;
+  const publicToken = useBagStore((state) => state.publicToken);
 
   const {
     reading,
@@ -55,6 +54,22 @@ function Home({ onOpenMenu }) {
   } = useBagMetrics(publicToken);
 
   const selectedMetric = metricsById[selectedMetricId] ?? null;
+
+  if (!publicToken) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] flex-col items-center justify-center gap-4 bg-white px-6 text-center">
+        <p className="text-[15px] text-gray-50">
+          My Bag에서 메인 가방을 먼저 등록해 주세요.
+        </p>
+        <Link
+          to="/mybag"
+          className="rounded-lg bg-gray-80 px-4 py-2.5 text-[15px] font-medium text-white"
+        >
+          My Bag으로 이동
+        </Link>
+      </main>
+    );
+  }
 
   if (isLoading) {
     return (

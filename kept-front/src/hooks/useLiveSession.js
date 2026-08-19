@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ensureLiveSession, getLatestReading } from "../api/bag";
 
 /**
@@ -25,6 +26,8 @@ import { ensureLiveSession, getLatestReading } from "../api/bag";
  */
 
 function useLiveSession(publicToken) {
+  const queryClient = useQueryClient();
+
   // ── 1단계: 세션 확보 ────────────────────────────────────────
   const sessionQuery = useQuery({
     //queryKey - 캐시된 데이터와 비교해 새로운 데이터를 가져올지, 캐시된 데이터를 사용할지 결정하는 기준
@@ -33,7 +36,14 @@ function useLiveSession(publicToken) {
 
     //enabled - publicToken이 null이면 이 쿼리를 아예 실행하지 않음
     enabled: !!publicToken,
-    staleTime: Infinity,
+
+    // ⚠️ 백엔드 세션 재사용 정책(180초 이내 RUNNING이면 재사용 / 넘으면 종료 후 재생성)이
+    // 실제로 동작하려면 프론트가 ensure를 "주기적으로" 다시 호출해줘야 합니다.
+    // staleTime: Infinity로 두면 최초 1번 이후로는 새로고침 전까지 절대 다시 안 불러서
+    // 이 정책 자체가 발동할 기회가 없습니다. 180초보다 짧게 잡아서, 그 안쪽에서는
+    // 불필요한 재호출을 막고(캐시 재사용) 그 밖에서는(탭 재방문, 리마운트 등) 자동으로
+    // 다시 확인하도록 합니다.
+    staleTime: 150 * 1000,
   });
 
   //ensureLiveSession의 응답 전체 중 session_id만 꺼내 저장
@@ -59,6 +69,18 @@ function useLiveSession(publicToken) {
     retry: 3,
     retryDelay: 1000,
   });
+
+  // ⚠️ 위 staleTime(150초)만으로는 "탭에 머물러 있는 동안"에는 refetch가 안 일어납니다
+  // (리마운트/포커스 복귀 시에만 stale 여부를 확인하므로). 그래서 세션이 끝났다는 걸
+  // reading 쪽에서 알게 되는 즉시(is_finished: true) 캐시된 "ensure" 응답을 무효화해서,
+  // 탭을 벗어나지 않고 계속 보고 있던 경우에도 곧바로 새 세션을 받아오도록 만듭니다.
+  useEffect(() => {
+    if (!publicToken || !readingQuery.data?.is_finished) return;
+
+    queryClient.invalidateQueries({
+      queryKey: ["liveSession", "ensure", publicToken],
+    });
+  }, [publicToken, readingQuery.data?.is_finished, queryClient]);
 
   return {
     //ensure API 응답 그대로
