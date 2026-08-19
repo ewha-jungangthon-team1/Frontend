@@ -8,6 +8,7 @@ function ReportRecentTab({ summary }) {
   const [activeChart, setActiveChart] = useState(RECENT_CHART_TABS[0].id);
 
   const chart = summary.charts[activeChart];
+  const headlineSentences = summary.headline.split(/(?<=[.!?])\s+/);
 
   return (
     <div className="px-6 pb-[55px] pt-5">
@@ -15,8 +16,12 @@ function ReportRecentTab({ summary }) {
         최근 7일 요약
       </p>
 
-      <h2 className="mt-2 text-[18px] font-bold leading-[1.5] tracking-[-0.03em] text-gray-90">
-        {summary.headline}
+      <h2 className="mt-2 max-w-[262px] break-keep text-[18px] font-bold leading-[1.5] tracking-[-0.03em] text-gray-90">
+        {headlineSentences.map((sentence, index) => (
+          <span key={`${sentence}-${index}`} className="block">
+            {sentence}
+          </span>
+        ))}
       </h2>
 
       {/* 하중 / 형태 / 환경 서브탭 */}
@@ -42,13 +47,15 @@ function ReportRecentTab({ summary }) {
 
       {/* 선택된 서브탭의 최근 7일 추이 그래프 */}
       <div className="mt-4">
-        <p className="text-[24px] font-bold leading-[1.32] tracking-[-0.03em] text-gray-90">
-          {chart.latestDisplayValue}
-        </p>
-
-        <div className="mt-3">
+        <div>
           {chart.points.length > 0 ? (
-            <MetricGraph points={chart.points} variant="line" />
+            <MetricGraph
+              key={activeChart}
+              points={chart.points}
+              variant="line"
+              unit={chart.unit}
+              yAxisTicks={chart.yAxisTicks}
+            />
           ) : (
             <p className="py-10 text-center text-[13px] text-gray-40">
               표시할 데이터가 없어요
@@ -63,20 +70,27 @@ function ReportRecentTab({ summary }) {
           최근 사용 기록
         </p>
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-2.5">
           {summary.stats.map((stat) => (
-            <div key={stat.label} className="rounded-lg bg-gray-5 px-4 py-3">
-              <p className="text-[13px] leading-[1.5] tracking-[-0.01em] text-gray-90">
+            <div
+              key={stat.label}
+              className="h-[97px] rounded-lg bg-white px-6 py-5"
+            >
+              <p className="text-[13px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-90">
                 {stat.label}
+              </p>
+
+              <div className="mt-0.5 flex items-baseline gap-1">
+                <p className="font-['Apple_SD_Gothic_Neo'] text-[22px] font-bold leading-[1.5] tracking-[-0.03em] text-gray-100">
+                  {stat.value}
+                </p>
+
                 {stat.sublabel && (
-                  <span className="ml-1 text-[13px] text-black/50">
+                  <span className="text-[13px] font-light leading-[1.5] tracking-[-0.01em] text-black/50">
                     {stat.sublabel}
                   </span>
                 )}
-              </p>
-              <p className="mt-1 text-[22px] font-bold leading-[1.5] tracking-[-0.03em] text-gray-100">
-                {stat.value}
-              </p>
+              </div>
             </div>
           ))}
         </div>

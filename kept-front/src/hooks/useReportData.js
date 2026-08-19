@@ -15,8 +15,11 @@ export const RECENT_CHART_TABS = [
     id: "load",
     label: "하중",
     chartKey: "load",
-    valueKey: "total_load_kg",
-    unit: "kg",
+    // 피그마의 하중 그래프는 무게(kg)가 아니라 좌우 하중 편중률을 표시한다
+    getValue: (point) =>
+      Math.abs(point.right_load_percent - point.left_load_percent),
+    unit: "%",
+    yAxisTicks: [15, 10, 5, 0],
   },
   {
     id: "shape",
@@ -34,11 +37,18 @@ export const RECENT_CHART_TABS = [
   },
 ];
 
-// {display_date: "2026-08-09"} → 그래프 x축에 쓰는 짧은 라벨 "08.09"
+// {display_date: "2026-08-09"} → 그래프 x축에 쓰는 짧은 라벨 "8.9"
 function toShortLabel(displayDate) {
   if (!displayDate) return "";
   const [, month, day] = displayDate.split("-");
-  return month && day ? `${month}.${day}` : displayDate;
+  if (!month || !day) return displayDate;
+
+  const monthNumber = Number(month);
+  const dayNumber = Number(day);
+
+  return Number.isFinite(monthNumber) && Number.isFinite(dayNumber)
+    ? `${monthNumber}.${dayNumber}`
+    : displayDate;
 }
 
 const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
@@ -58,6 +68,14 @@ function toDateWithWeekday(displayDate) {
 function toPercent(ratio, digits = 1) {
   if (ratio === null || ratio === undefined) return null;
   return `${(ratio * 100).toFixed(digits)}%`;
+}
+
+// 부동소수점 오차를 정리해 하중 값을 최대 소수점 둘째 자리까지 표시한다
+function formatKg(value) {
+  if (value === null || value === undefined) return "-";
+
+  const roundedValue = Math.round(Number(value) * 100) / 100;
+  return `${roundedValue}kg`;
 }
 
 // 리포트 화면 전체에서 사용하는 데이터를 반환하는 훅
@@ -90,17 +108,11 @@ function useReportData() {
         stats: [
           {
             label: "평균하중",
-            value:
-              report.metrics.load.average_kg != null
-                ? `${report.metrics.load.average_kg}kg`
-                : "-",
+            value: formatKg(report.metrics.load.average_kg),
           },
           {
             label: "최대하중",
-            value:
-              report.metrics.load.max_kg != null
-                ? `${report.metrics.load.max_kg}kg`
-                : "-",
+            value: formatKg(report.metrics.load.max_kg),
           },
           {
             label: "과부하 발생 횟수",
@@ -120,7 +132,9 @@ function useReportData() {
           RECENT_CHART_TABS.map((tab) => {
             const points = (report.charts[tab.chartKey] ?? []).map((point) => ({
               time: toShortLabel(point.display_date),
-              value: point[tab.valueKey] ?? 0,
+              value: tab.getValue
+                ? tab.getValue(point)
+                : (point[tab.valueKey] ?? 0),
             }));
             const latest = points[points.length - 1];
 
@@ -129,6 +143,7 @@ function useReportData() {
               {
                 points,
                 unit: tab.unit,
+                yAxisTicks: tab.yAxisTicks,
                 latestDisplayValue: latest ? `${latest.value}${tab.unit}` : "-",
               },
             ];
@@ -171,7 +186,7 @@ function useReportData() {
               {
                 id: "loadBias",
                 label: "하중 편중",
-                metric: comparisonMetrics.load_bias?.max_absolute,
+                metric: comparisonMetrics.load_bias?.max_absolute_percent,
               },
               {
                 id: "overload",
@@ -181,12 +196,14 @@ function useReportData() {
               {
                 id: "deformation",
                 label: "변형 누적량",
-                metric: comparisonMetrics.deformation?.max_ratio,
+                metric: comparisonMetrics.deformation?.max_percent,
               },
             ].filter((change) => change.metric)
           : [],
-        // priority_actions는 최대 2개 문자열
-        cautions: report.ai_result?.content?.priority_actions ?? [],
+        // 주의할 점은 API의 care_comment 문구를 사용한다
+        cautions: report.ai_result?.content?.care_comment
+          ? [report.ai_result.content.care_comment]
+          : [],
       }
     : null;
 
