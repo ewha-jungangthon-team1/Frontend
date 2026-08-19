@@ -1,6 +1,9 @@
 import { Link } from "react-router";
 import MyBagHeader from "../components/MyBagHeader";
 import { MY_BAG_CATEGORIES } from "../data/myBags";
+import useMyBags from "../hooks/useMyBags";
+import useBagStore from "../store/bagStore";
+import useHorizontalMouseDrag from "../hooks/useHorizontalMouseDrag";
 
 const BAG_LIST_STYLE = {
   "top-handle-01": { width: 129, height: 111, top: 4, offsetX: 8 },
@@ -20,6 +23,10 @@ const BAG_LIST_STYLE = {
 };
 
 function MyBag({ onOpenMenu }) {
+  useMyBags();
+  const storedProduct = useBagStore((state) => state.product);
+  const { mouseDragProps } = useHorizontalMouseDrag();
+
   return (
     <main className="relative mx-auto min-h-[852px] w-full max-w-[393px] overflow-hidden bg-white">
       <MyBagHeader onOpenMenu={onOpenMenu} />
@@ -39,7 +46,11 @@ function MyBag({ onOpenMenu }) {
               <img src="/icons/right.svg" alt="" className="size-full" />
             </Link>
 
-            <div className="absolute inset-x-0 top-[-12px] z-10 h-[154px] overflow-x-auto [&::-webkit-scrollbar]:hidden">
+            <div
+              {...mouseDragProps}
+              className="absolute inset-x-0 top-[-12px] z-10 h-[154px] cursor-grab select-none overflow-x-auto active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+              onDragStart={(event) => event.preventDefault()}
+            >
               <div className="flex h-full min-w-max gap-[7px] px-[30px]">
                 {category.bags.map((bag) => {
                   const bagStyle = BAG_LIST_STYLE[bag.id] ?? {
@@ -48,13 +59,16 @@ function MyBag({ onOpenMenu }) {
                     top: 0,
                     offsetX: 0,
                   };
+                  const isMainBag =
+                    bag.apiModelName &&
+                    bag.apiModelName === storedProduct?.model_name;
 
                   return (
                     <div
                       key={bag.id}
                       className="relative h-full w-[137px] shrink-0"
                     >
-                      {bag.isMain && (
+                      {isMainBag && (
                         <img
                           src="/images/my-bag/main-bag-highlight.svg"
                           alt=""
@@ -78,7 +92,7 @@ function MyBag({ onOpenMenu }) {
                         }}
                       />
 
-                      {bag.isMain && (
+                      {isMainBag && (
                         <div
                           aria-hidden="true"
                           className="pointer-events-none absolute left-1/2 top-[109px] z-20 h-[5px] w-[90px]"

@@ -1,10 +1,52 @@
-import { Link } from "react-router";
-const CARE_METRICS = ["현재 온도 47°C", "우측 하중 68%", "형태 편차 7%"];
+import { useNavigate } from "react-router";
+import useBagStore from "../store/bagStore";
+import useLiveSession from "../hooks/useLiveSession";
+import useDetailedCare from "../hooks/useDetailedCare";
 
-function CareBackground() {
+const CARE_BACKGROUND_BY_COLOR = {
+  red: "/images/2-care-red.png",
+  yellow: "/images/2-care-yellow.png",
+  blue: "/images/2-care-blue.png",
+};
+
+function formatUpdateTime(isoString) {
+  if (!isoString) return "--:-- update";
+
+  const date = new Date(isoString);
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${hours}:${minutes} update`;
+}
+
+function getCareBackgroundColor(themeKey = "") {
+  const normalizedThemeKey = themeKey.toLowerCase();
+
+  if (
+    normalizedThemeKey.includes("humidity") ||
+    normalizedThemeKey.includes("moisture") ||
+    normalizedThemeKey.includes("water")
+  ) {
+    return "blue";
+  }
+
+  if (
+    normalizedThemeKey.includes("load") ||
+    normalizedThemeKey.includes("shape") ||
+    normalizedThemeKey.includes("deformation")
+  ) {
+    return "yellow";
+  }
+
+  return "red";
+}
+
+function CareBackground({ themeKey }) {
+  const color = getCareBackgroundColor(themeKey);
+
   return (
     <img
-      src="/images/2-care-red.png"
+      src={CARE_BACKGROUND_BY_COLOR[color]}
       alt=""
       aria-hidden="true"
       className="pointer-events-none absolute inset-0 h-full w-full object-cover"
@@ -13,10 +55,65 @@ function CareBackground() {
 }
 
 function Care({ onOpenMenu }) {
+  const navigate = useNavigate();
+  const publicToken = useBagStore((state) => state.publicToken);
+
+  const { session, reading, isLoading, isError, error } =
+    useLiveSession(publicToken);
+
+  const detailedCareMutation = useDetailedCare();
+
+  const presentation = reading?.presentation;
+  const careState = presentation?.state;
+  const displayMetrics = presentation?.display_metrics ?? [];
+
+  const handleOpenDetailedCare = () => {
+    if (!session?.session_id) return;
+
+    detailedCareMutation.mutate(session.session_id, {
+      onSuccess: (careResult) => {
+        navigate("/care/personal", {
+          state: {
+            careResult,
+            themeKey: careState?.theme_key,
+          },
+        });
+      },
+    });
+  };
+
+  if (!publicToken) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] items-center justify-center bg-white px-6 text-center">
+        <p className="text-[15px] text-gray-50">
+          My Bag에서 메인 가방을 먼저 등록해 주세요.
+        </p>
+      </main>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] items-center justify-center bg-white">
+        <p className="text-[15px] text-gray-50">불러오는 중...</p>
+      </main>
+    );
+  }
+
+  if (isError) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] items-center justify-center bg-white px-6 text-center">
+        <p className="text-[15px] text-gray-50">
+          {error?.message ?? "가방 상태를 불러오지 못했어요."}
+        </p>
+      </main>
+    );
+  }
+
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-white">
+    <main className="relative mx-auto min-h-dvh w-full max-w-[393px] overflow-hidden bg-white">
       {/*배경 그라데이션*/}
-      <CareBackground />
+      <CareBackground themeKey={careState?.theme_key} />
 
       <div className="relative z-10 flex min-h-dvh flex-col">
         {/*상단 영역*/}
@@ -38,28 +135,25 @@ function Care({ onOpenMenu }) {
         {/*케어 안내 영역*/}
         <section className="px-6 pt-[18px]">
           <p className="text-[16px] leading-[1.32] tracking-[-0.01em] text-gray-50">
-            14:42 update
+            {formatUpdateTime(reading?.observed_at)}
           </p>
 
-          <h2 className="mt-2 text-[28px] font-bold leading-[1.4] tracking-[-0.03em] text-gray-90">
-            가방을 서늘한 곳으로
-            <br />
-            옮겨 주세요
+          <h2 className="mt-2 whitespace-pre-line break-keep text-balance text-[28px] font-bold leading-[1.4] tracking-[-0.03em] text-gray-90">
+            {careState?.quick_care ?? "가방 상태를 확인해 주세요."}
           </h2>
 
-          <p className="mt-2 text-[18px] font-medium leading-[1.5] tracking-[-0.03em] text-gray-60">
-            현재 온도가 높고 형태 변화가 감지되어
-            <br />
-            먼저 열을 식혀 주는 것이 좋아요.
+          <p className="mt-2 whitespace-pre-line break-keep text-balance text-[18px] font-medium leading-[1.5] tracking-[-0.03em] text-gray-60">
+            {careState?.description ?? "현재 가방 상태를 확인하고 있어요."}
           </p>
 
           <ul className="mt-[19px] flex flex-col items-start gap-2">
-            {CARE_METRICS.map((metric) => (
+            {displayMetrics.map((metric) => (
               <li
-                key={metric}
+                key={metric.key}
                 className="rounded-full bg-white/80 px-3 py-2 text-[16px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-60"
               >
-                {metric}
+                {metric.label} {metric.value}
+                {metric.unit}
               </li>
             ))}
           </ul>
@@ -67,12 +161,23 @@ function Care({ onOpenMenu }) {
 
         {/*하단 버튼 영역*/}
         <div className="mt-auto px-6 pb-[55px]">
-          <Link
-            to="/care/personal"
-            className="flex w-full items-center justify-center rounded-lg bg-gray-70 px-3 py-2.5 text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-white"
+          <button
+            type="button"
+            onClick={handleOpenDetailedCare}
+            disabled={!session?.session_id || detailedCareMutation.isPending}
+            className="flex w-full items-center justify-center rounded-lg bg-gray-70 px-3 py-2.5 text-[16px] font-bold leading-[1.5] tracking-[-0.01em] text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            전체 케어 방법 보기
-          </Link>
+            {detailedCareMutation.isPending
+              ? "케어 방법 만드는 중..."
+              : "전체 케어 방법 보기"}
+          </button>
+
+          {detailedCareMutation.isError && (
+            <p className="mt-2 text-center text-[13px] text-red-500">
+              {detailedCareMutation.error?.message ??
+                "상세 케어 정보를 불러오지 못했어요."}
+            </p>
+          )}
         </div>
       </div>
     </main>

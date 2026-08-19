@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
 import MyBagHeader from "../components/MyBagHeader";
 import { MY_BAG_CATEGORIES } from "../data/myBags";
+import useMyBags from "../hooks/useMyBags";
+import useBagStore from "../store/bagStore";
 
 const DEFAULT_BAG_DETAIL_STYLE = {
   width: 256,
@@ -11,8 +13,10 @@ const DEFAULT_BAG_DETAIL_STYLE = {
 
 const BAG_SLIDE_WIDTH = 228;
 const CENTER_SLIDE_INDEX = 1;
-const MIN_SWIPE_DISTANCE = 24;
+const MIN_SWIPE_DISTANCE = 50;
+const MOUSE_DRAG_START_THRESHOLD = 5;
 const CENTER_POSITION_TOLERANCE = 8;
+const CAROUSEL_ANIMATION_DURATION = 520;
 
 const BAG_DETAIL_STYLE = {
   "top-handle-01": { width: 256, height: 222, top: 0 },
@@ -34,6 +38,11 @@ const BAG_DETAIL_STYLE = {
 function MyBagDetail({ onOpenMenu }) {
   const { categoryId } = useParams();
 
+  const { data: apiBags = [] } = useMyBags();
+
+  const storedProduct = useBagStore((state) => state.product);
+  const saveSelectedBag = useBagStore((state) => state.setSelectedBag);
+
   const selectedCategory = MY_BAG_CATEGORIES.find(
     (category) => category.id === categoryId,
   );
@@ -43,13 +52,15 @@ function MyBagDetail({ onOpenMenu }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const carouselRef = useRef(null);
   const scrollEndTimerRef = useRef(null);
+  const animationFrameRef = useRef(null);
+  const isCarouselAnimatingRef = useRef(false);
   const touchStartXRef = useRef(null);
-
-  const initialMainBag = MY_BAG_CATEGORIES.flatMap(
-    (category) => category.bags,
-  ).find((bag) => bag.isMain);
-
-  const [mainBagId, setMainBagId] = useState(initialMainBag?.id ?? null);
+  const isTouchDraggingRef = useRef(false);
+  const mouseStartXRef = useRef(null);
+  const mouseStartScrollLeftRef = useRef(0);
+  const mousePointerIdRef = useRef(null);
+  const mouseDidDragRef = useRef(false);
+  const isMouseDraggingRef = useRef(false);
 
   useLayoutEffect(() => {
     if (!carouselRef.current) return;
@@ -60,6 +71,10 @@ function MyBagDetail({ onOpenMenu }) {
   useEffect(
     () => () => {
       window.clearTimeout(scrollEndTimerRef.current);
+
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+      }
     },
     [],
   );
@@ -80,7 +95,15 @@ function MyBagDetail({ onOpenMenu }) {
   const selectedBag = bags[safeSelectedIndex];
   const previousBag = bags[(safeSelectedIndex - 1 + bags.length) % bags.length];
   const nextBag = bags[(safeSelectedIndex + 1) % bags.length];
-  const isMainBag = selectedBag.id === mainBagId;
+
+  const selectedApiBag = apiBags.find(
+    (apiBag) => apiBag.product.model_name === selectedBag.apiModelName,
+  );
+
+  const isSelectable = Boolean(selectedApiBag);
+
+  const isMainBag =
+    isSelectable && selectedBag.apiModelName === storedProduct?.model_name;
 
   const carouselBags = [
     { bag: previousBag, key: `previous-${previousBag.id}` },
@@ -91,8 +114,24 @@ function MyBagDetail({ onOpenMenu }) {
   const handleCarouselScroll = (event) => {
     const carouselElement = event.currentTarget;
 
+    if (
+      isMouseDraggingRef.current ||
+      isTouchDraggingRef.current ||
+      isCarouselAnimatingRef.current
+    ) {
+      return;
+    }
+
     window.clearTimeout(scrollEndTimerRef.current);
     scrollEndTimerRef.current = window.setTimeout(() => {
+      if (
+        isMouseDraggingRef.current ||
+        isTouchDraggingRef.current ||
+        isCarouselAnimatingRef.current
+      ) {
+        return;
+      }
+
       const centeredSlide = Math.round(
         carouselElement.scrollLeft / BAG_SLIDE_WIDTH,
       );
@@ -115,33 +154,213 @@ function MyBagDetail({ onOpenMenu }) {
     }, 100);
   };
 
+  const stopCarouselAnimation = () => {
+    window.clearTimeout(scrollEndTimerRef.current);
+
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    isCarouselAnimatingRef.current = false;
+
+    if (carouselRef.current) {
+      carouselRef.current.style.scrollSnapType = "";
+    }
+  };
+
   const scrollToSlide = (slideIndex) => {
+    const carouselElement = carouselRef.current;
+
+    if (!carouselElement) return;
+
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
+    const targetScrollLeft = slideIndex * BAG_SLIDE_WIDTH;
 
-    carouselRef.current?.scrollTo({
-      left: slideIndex * BAG_SLIDE_WIDTH,
-      behavior: prefersReducedMotion ? "auto" : "smooth",
-    });
+    stopCarouselAnimation();
+    isCarouselAnimatingRef.current = true;
+    carouselElement.style.scrollSnapType = "none";
+
+    const finishSlideChange = () => {
+      carouselElement.scrollLeft = targetScrollLeft;
+
+      if (slideIndex === 0) {
+        setSelectedIndex(
+          (currentIndex) => (currentIndex - 1 + bags.length) % bags.length,
+        );
+      } else if (slideIndex === 2) {
+        setSelectedIndex((currentIndex) => (currentIndex + 1) % bags.length);
+      }
+
+      window.requestAnimationFrame(() => {
+        carouselElement.style.scrollSnapType = "";
+        isCarouselAnimatingRef.current = false;
+      });
+    };
+
+    if (prefersReducedMotion) {
+      finishSlideChange();
+      return;
+    }
+
+    const startScrollLeft = carouselElement.scrollLeft;
+    const scrollDistance = targetScrollLeft - startScrollLeft;
+    const startTime = window.performance.now();
+
+    const animateScroll = (currentTime) => {
+      const elapsedTime = currentTime - startTime;
+      const progress = Math.min(
+        elapsedTime / CAROUSEL_ANIMATION_DURATION,
+        1,
+      );
+      const easedProgress =
+        progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      carouselElement.scrollLeft =
+        startScrollLeft + scrollDistance * easedProgress;
+
+      if (progress < 1) {
+        animationFrameRef.current = window.requestAnimationFrame(animateScroll);
+        return;
+      }
+
+      animationFrameRef.current = null;
+      finishSlideChange();
+    };
+
+    animationFrameRef.current = window.requestAnimationFrame(animateScroll);
+  };
+
+  const handleMousePointerDown = (event) => {
+    if (event.pointerType !== "mouse" || event.button !== 0) return;
+
+    window.clearTimeout(scrollEndTimerRef.current);
+    stopCarouselAnimation();
+
+    mouseStartXRef.current = event.clientX;
+    mouseStartScrollLeftRef.current = event.currentTarget.scrollLeft;
+    mousePointerIdRef.current = event.pointerId;
+    mouseDidDragRef.current = false;
+    isMouseDraggingRef.current = true;
+
+    event.currentTarget.style.scrollSnapType = "none";
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handleMousePointerMove = (event) => {
+    if (
+      event.pointerType !== "mouse" ||
+      mouseStartXRef.current === null ||
+      mousePointerIdRef.current !== event.pointerId
+    ) {
+      return;
+    }
+
+    const swipeDistance = mouseStartXRef.current - event.clientX;
+
+    if (Math.abs(swipeDistance) < MOUSE_DRAG_START_THRESHOLD) return;
+
+    mouseDidDragRef.current = true;
+    event.preventDefault();
+
+    const previewDistance = Math.max(
+      -BAG_SLIDE_WIDTH,
+      Math.min(BAG_SLIDE_WIDTH, swipeDistance),
+    );
+
+    if (carouselRef.current) {
+      carouselRef.current.scrollLeft =
+        mouseStartScrollLeftRef.current + previewDistance * 0.8;
+    }
+  };
+
+  const handleMousePointerUp = (event) => {
+    if (
+      event.pointerType !== "mouse" ||
+      mouseStartXRef.current === null ||
+      mousePointerIdRef.current !== event.pointerId
+    ) {
+      return;
+    }
+
+    const swipeDistance = mouseStartXRef.current - event.clientX;
+    const carouselElement = carouselRef.current;
+
+    if (carouselElement?.hasPointerCapture?.(event.pointerId)) {
+      carouselElement.releasePointerCapture(event.pointerId);
+    }
+
+    if (carouselElement) {
+      carouselElement.style.scrollSnapType = "";
+    }
+
+    isMouseDraggingRef.current = false;
+    mouseStartXRef.current = null;
+    mousePointerIdRef.current = null;
+
+    if (mouseDidDragRef.current) {
+      if (swipeDistance >= MIN_SWIPE_DISTANCE) {
+        scrollToSlide(2);
+      } else if (swipeDistance <= -MIN_SWIPE_DISTANCE) {
+        scrollToSlide(0);
+      } else {
+        scrollToSlide(CENTER_SLIDE_INDEX);
+      }
+    }
+
+    window.setTimeout(() => {
+      mouseDidDragRef.current = false;
+    }, 0);
+  };
+
+  const handleMousePointerCancel = (event) => {
+    if (event.pointerType !== "mouse") return;
+
+    const carouselElement = carouselRef.current;
+
+    if (carouselElement?.hasPointerCapture?.(event.pointerId)) {
+      carouselElement.releasePointerCapture(event.pointerId);
+    }
+
+    if (carouselElement) {
+      carouselElement.style.scrollSnapType = "";
+    }
+
+    isMouseDraggingRef.current = false;
+    mouseStartXRef.current = null;
+    mousePointerIdRef.current = null;
+    mouseDidDragRef.current = false;
+    scrollToSlide(CENTER_SLIDE_INDEX);
   };
 
   const handleTouchStart = (event) => {
+    stopCarouselAnimation();
+    isTouchDraggingRef.current = true;
     touchStartXRef.current = event.touches[0]?.clientX ?? null;
   };
 
   const handleTouchEnd = (event) => {
-    if (touchStartXRef.current === null) return;
+    if (touchStartXRef.current === null) {
+      isTouchDraggingRef.current = false;
+      return;
+    }
 
     const touchEndX = event.changedTouches[0]?.clientX;
 
     if (touchEndX === undefined) {
       touchStartXRef.current = null;
+      isTouchDraggingRef.current = false;
+      scrollToSlide(CENTER_SLIDE_INDEX);
       return;
     }
 
     const swipeDistance = touchStartXRef.current - touchEndX;
     touchStartXRef.current = null;
+    isTouchDraggingRef.current = false;
 
     if (swipeDistance > MIN_SWIPE_DISTANCE) {
       scrollToSlide(2);
@@ -173,12 +392,18 @@ function MyBagDetail({ onOpenMenu }) {
 
         <div
           ref={carouselRef}
-          className="absolute inset-0 z-10 snap-x snap-mandatory overflow-x-auto overscroll-x-contain [&::-webkit-scrollbar]:hidden"
+          className="absolute inset-0 z-10 cursor-grab select-none snap-x snap-mandatory overflow-x-auto overscroll-x-contain active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
           onScroll={handleCarouselScroll}
+          onPointerDown={handleMousePointerDown}
+          onPointerMove={handleMousePointerMove}
+          onPointerUp={handleMousePointerUp}
+          onPointerCancel={handleMousePointerCancel}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={() => {
             touchStartXRef.current = null;
+            isTouchDraggingRef.current = false;
+            scrollToSlide(CENTER_SLIDE_INDEX);
           }}
           onDragStart={(event) => event.preventDefault()}
         >
@@ -196,14 +421,20 @@ function MyBagDetail({ onOpenMenu }) {
                   aria-label={`${bag.alt} 보기`}
                   aria-current={isCentered ? "true" : undefined}
                   className="relative h-full w-[228px] shrink-0 snap-center snap-always"
-                  onClick={() => scrollToSlide(slideIndex)}
+                  onClick={() => {
+                    if (mouseDidDragRef.current) {
+                      mouseDidDragRef.current = false;
+                      return;
+                    }
+                    scrollToSlide(slideIndex);
+                  }}
                 >
                   {showMainDecoration && (
                     <img
                       src="/images/my-bag/main-bag-highlight.svg"
                       alt=""
                       aria-hidden="true"
-                      className="pointer-events-none absolute left-1/2 top-4 h-[166px] w-[262px] -translate-x-1/2"
+                      className="pointer-events-none absolute left-1/2 top-4 h-[190px] w-[262px] -translate-x-1/2"
                     />
                   )}
 
@@ -270,13 +501,23 @@ function MyBagDetail({ onOpenMenu }) {
 
       <button
         type="button"
-        disabled={isMainBag}
-        onClick={() => setMainBagId(selectedBag.id)}
+        disabled={isMainBag || !isSelectable}
+        onClick={() => {
+          if (!selectedApiBag) return;
+
+          saveSelectedBag(selectedApiBag.public_token, selectedApiBag.product);
+        }}
         className={`absolute bottom-[56px] left-1/2 z-30 flex w-[345px] -translate-x-1/2 items-center justify-center rounded-lg px-3 py-2.5 text-[16px] font-bold leading-[1.5] tracking-[-0.01em] ${
-          isMainBag ? "bg-gray-5 text-gray-70" : "bg-gray-80 text-white"
+          isMainBag || !isSelectable
+            ? "bg-gray-5 text-gray-70"
+            : "bg-gray-80 text-white"
         }`}
       >
-        {isMainBag ? "메인 가방으로 등록중" : "메인 가방으로 등록하기"}
+        {isMainBag
+          ? "메인 가방으로 등록중"
+          : isSelectable
+            ? "메인 가방으로 등록하기"
+            : "현재 선택할 수 없는 가방이에요"}
       </button>
     </main>
   );
