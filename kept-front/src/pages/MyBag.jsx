@@ -1,6 +1,8 @@
 import { Link } from "react-router";
 import MyBagHeader from "../components/MyBagHeader";
 import { MY_BAG_CATEGORIES } from "../data/myBags";
+import useMyBags from "../hooks/useMyBags";
+import useBagStore from "../store/bagStore";
 
 const BAG_LIST_STYLE = {
   "top-handle-01": { width: 129, height: 111, top: 4, offsetX: 8 },
@@ -20,6 +22,9 @@ const BAG_LIST_STYLE = {
 };
 
 function MyBag({ onOpenMenu }) {
+  const { data: apiBags, isLoading, isError, error } = useMyBags();
+  const storedProduct = useBagStore((state) => state.product);
+
   return (
     <main className="relative mx-auto min-h-[852px] w-full max-w-[393px] overflow-hidden bg-white">
       <MyBagHeader onOpenMenu={onOpenMenu} />
@@ -48,13 +53,16 @@ function MyBag({ onOpenMenu }) {
                     top: 0,
                     offsetX: 0,
                   };
+                  const isMainBag =
+                    bag.apiModelName &&
+                    bag.apiModelName === storedProduct?.model_name;
 
                   return (
                     <div
                       key={bag.id}
                       className="relative h-full w-[137px] shrink-0"
                     >
-                      {bag.isMain && (
+                      {isMainBag && (
                         <img
                           src="/images/my-bag/main-bag-highlight.svg"
                           alt=""
@@ -78,7 +86,7 @@ function MyBag({ onOpenMenu }) {
                         }}
                       />
 
-                      {bag.isMain && (
+                      {isMainBag && (
                         <div
                           aria-hidden="true"
                           className="pointer-events-none absolute left-1/2 top-[109px] z-20 h-[5px] w-[90px]"

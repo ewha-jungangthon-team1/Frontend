@@ -5,6 +5,7 @@ export const MY_BAG_CATEGORIES = [
     bags: [
       {
         id: "top-handle-01",
+        apiModelName: "Visetos Original Boston Bag",
         image: "/images/my-bag/top-handle-01.png",
         alt: "브라운 탑 핸들백",
         name: "MCM Visetos\nOriginal Boston Bag",
@@ -45,6 +46,7 @@ export const MY_BAG_CATEGORIES = [
       },
       {
         id: "shoulder-02",
+        apiModelName: "Vela Visetos Sling Bag",
         image: "/images/my-bag/shoulder-02.png",
         alt: "숄더백",
         isMain: false,

@@ -2,6 +2,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useParams } from "react-router";
 import MyBagHeader from "../components/MyBagHeader";
 import { MY_BAG_CATEGORIES } from "../data/myBags";
+import useMyBags from "../hooks/useMyBags";
+import useBagStore from "../store/bagStore";
 
 const DEFAULT_BAG_DETAIL_STYLE = {
   width: 256,
@@ -34,6 +36,11 @@ const BAG_DETAIL_STYLE = {
 function MyBagDetail({ onOpenMenu }) {
   const { categoryId } = useParams();
 
+  const { data: apiBags = [] } = useMyBags();
+
+  const storedProduct = useBagStore((state) => state.product);
+  const saveSelectedBag = useBagStore((state) => state.setSelectedBag);
+
   const selectedCategory = MY_BAG_CATEGORIES.find(
     (category) => category.id === categoryId,
   );
@@ -44,12 +51,6 @@ function MyBagDetail({ onOpenMenu }) {
   const carouselRef = useRef(null);
   const scrollEndTimerRef = useRef(null);
   const touchStartXRef = useRef(null);
-
-  const initialMainBag = MY_BAG_CATEGORIES.flatMap(
-    (category) => category.bags,
-  ).find((bag) => bag.isMain);
-
-  const [mainBagId, setMainBagId] = useState(initialMainBag?.id ?? null);
 
   useLayoutEffect(() => {
     if (!carouselRef.current) return;
@@ -80,7 +81,15 @@ function MyBagDetail({ onOpenMenu }) {
   const selectedBag = bags[safeSelectedIndex];
   const previousBag = bags[(safeSelectedIndex - 1 + bags.length) % bags.length];
   const nextBag = bags[(safeSelectedIndex + 1) % bags.length];
-  const isMainBag = selectedBag.id === mainBagId;
+
+  const selectedApiBag = apiBags.find(
+    (apiBag) => apiBag.product.model_name === selectedBag.apiModelName,
+  );
+
+  const isSelectable = Boolean(selectedApiBag);
+
+  const isMainBag =
+    isSelectable && selectedBag.apiModelName === storedProduct?.model_name;
 
   const carouselBags = [
     { bag: previousBag, key: `previous-${previousBag.id}` },
@@ -203,7 +212,7 @@ function MyBagDetail({ onOpenMenu }) {
                       src="/images/my-bag/main-bag-highlight.svg"
                       alt=""
                       aria-hidden="true"
-                      className="pointer-events-none absolute left-1/2 top-4 h-[166px] w-[262px] -translate-x-1/2"
+                      className="pointer-events-none absolute left-1/2 top-4 h-[190px] w-[262px] -translate-x-1/2"
                     />
                   )}
 
@@ -270,13 +279,23 @@ function MyBagDetail({ onOpenMenu }) {
 
       <button
         type="button"
-        disabled={isMainBag}
-        onClick={() => setMainBagId(selectedBag.id)}
+        disabled={isMainBag || !isSelectable}
+        onClick={() => {
+          if (!selectedApiBag) return;
+
+          saveSelectedBag(selectedApiBag.public_token, selectedApiBag.product);
+        }}
         className={`absolute bottom-[56px] left-1/2 z-30 flex w-[345px] -translate-x-1/2 items-center justify-center rounded-lg px-3 py-2.5 text-[16px] font-bold leading-[1.5] tracking-[-0.01em] ${
-          isMainBag ? "bg-gray-5 text-gray-70" : "bg-gray-80 text-white"
+          isMainBag || !isSelectable
+            ? "bg-gray-5 text-gray-70"
+            : "bg-gray-80 text-white"
         }`}
       >
-        {isMainBag ? "메인 가방으로 등록중" : "메인 가방으로 등록하기"}
+        {isMainBag
+          ? "메인 가방으로 등록중"
+          : isSelectable
+            ? "메인 가방으로 등록하기"
+            : "현재 선택할 수 없는 가방이에요"}
       </button>
     </main>
   );
