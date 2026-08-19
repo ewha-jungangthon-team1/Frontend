@@ -6,7 +6,7 @@ import ReportTabs from "./ReportTabs";
 // 사용기록 상세(3.2.2) 화면에서는 이 대신 DetailHeader(뒤로가기 헤더)를 사용한다
 function ReportNavBar({ activeTab, onChangeTab, onOpenMenu }) {
   return (
-    <div className="relative z-10 bg-white">
+    <div className="relative z-10">
       <PageHeader title="Report" onOpenMenu={onOpenMenu} />
 
       <div className="mt-4">

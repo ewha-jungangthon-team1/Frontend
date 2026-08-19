@@ -13,7 +13,7 @@ function ReportTabs({ activeTab, onChangeTab }) {
             key={tab.id}
             type="button"
             onClick={() => onChangeTab(tab.id)}
-            className={`flex-1 rounded-lg px-2.5 py-2 text-[15px] leading-[1.5] tracking-[-0.01em] transition-colors ${
+            className={`flex-1 rounded-lg px-[8px] py-[8px] text-[15px] leading-[1.5] tracking-[-0.01em] transition-colors ${
               isActive
                 ? "bg-gray-80 font-bold text-white"
                 : "font-medium text-gray-60"

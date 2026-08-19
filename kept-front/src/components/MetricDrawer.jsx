@@ -24,24 +24,23 @@ function MetricDrawer({ metric, onClose }) {
         }`}
         aria-hidden={!isOpen}
       >
-        <div className="rounded-t-[28px] bg-white px-6 pb-10 pt-3 shadow-[0_-4px_24px_rgba(0,0,0,0.12)]">
+        <div className="relative rounded-t-[28px] bg-white px-6 pb-10 pt-3 shadow-[0_-4px_24px_rgba(0,0,0,0.12)]">
           {/* 드래그 핸들 */}
           <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-20" />
-
-          <div className="flex items-start justify-between">
-            <p className="text-[14px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-50">
-              {metric?.drawerTitle}
-            </p>
-
+          <div className="flex justify-end pb-[8px]">
             <button
               type="button"
               aria-label="닫기"
               onClick={onClose}
-              className="-mr-1 -mt-1 text-[22px] font-light leading-none text-gray-40"
+              className="size-6"
             >
-              ×
+              <img src="/icons/x_black.svg" alt="" className="size-full" />
             </button>
           </div>
+
+          <p className="pr-8 text-[14px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-50">
+            {metric?.drawerTitle}
+          </p>
 
           <p className="mt-1 text-[28px] font-bold leading-[1.32] tracking-[-0.03em] text-gray-90">
             {metric?.displayValue}
@@ -57,18 +56,15 @@ function MetricDrawer({ metric, onClose }) {
               )}
             </div>
           )}
-
-          <button
-            type="button"
-            className="mt-5 flex items-center gap-0.5 text-[14px] font-medium leading-[1.5] tracking-[-0.01em] text-gray-60"
-          >
-            {metric?.moreLabel ?? "관련 기록 더 보기"}
-            <img src="/icons/right.svg" alt="" className="size-4" />
-          </button>
-
-          <p className="mt-4 text-[11px] leading-[1.5] tracking-[-0.01em] text-gray-40">
-            *리포트 탭 완성된 후 그래프 내용이 수정될 수 있습니다.
-          </p>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="mt-5 flex items-center gap-0.5 text-[14px] font-medium leading-[1.5] tracking-[-0.01em] text-main-1"
+            >
+              {metric?.moreLabel ?? "관련 기록 더 보기"}
+              <img src="/icons/right_brown.png" alt="" className="size-4" />
+            </button>
+          </div>
         </div>
       </div>
     </>

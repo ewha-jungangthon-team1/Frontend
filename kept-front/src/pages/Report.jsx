@@ -1,11 +1,22 @@
 import useReportNavigation from "../hooks/useReportNavigation";
 import useReportData from "../hooks/useReportData";
-import ScreenFrame from "../components/ScreenFrame";
 import ReportNavBar from "../components/ReportNavBar";
 import ReportRecentTab from "../components/ReportRecentTab";
 import ReportUsageList from "../components/ReportUsageList";
 import ReportUsageDetail from "../components/ReportUsageDetail";
 import ReportPatternTab from "../components/ReportPatternTab";
+
+// Report 기능 전체(최근/사용 기록/사용 기록 상세/형태 분석)가 공유하는 배경
+function ReportBackground() {
+  return (
+    <img
+      src="/images/3-reportimage.png"
+      alt=""
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+    />
+  );
+}
 
 function Report({ onOpenMenu }) {
   // 탭 전환 + 사용기록 상세 진입/이탈 상태
@@ -34,14 +45,16 @@ function Report({ onOpenMenu }) {
   );
 
   return (
-    // 393 x 852 기준 화면 (Home과 동일하게 웹에서는 확대, 폰에서는 원래 크기)
-    <ScreenFrame>
-      <main className="relative flex h-full w-full flex-col overflow-hidden bg-white">
+    // Home / Care와 동일한 레이아웃 방식 (393px 폭 모바일 프레임, mx-auto로 중앙 정렬)
+    <main className="relative mx-auto min-h-dvh w-full max-w-[393px] overflow-hidden bg-white">
+      <ReportBackground />
+
+      <div className="relative z-10 flex min-h-dvh flex-col">
         {selectedRecord ? (
           // 사용기록 상세(3.2.2): 탭 내비바 대신 뒤로가기 헤더를 보여준다
           <ReportUsageDetail
             record={selectedRecord}
-            careComment={report?.ai_result?.content?.care_comment}
+            report={report}
             onBack={closeUsageDetail}
           />
         ) : (
@@ -53,8 +66,8 @@ function Report({ onOpenMenu }) {
               onOpenMenu={onOpenMenu}
             />
 
-            {/* 탭별 콘텐츠 영역 (스크롤 가능) */}
-            <div className="flex-1 overflow-y-auto">
+            {/* 탭별 콘텐츠 영역 */}
+            <div className="flex-1">
               {isLoading && (
                 <p className="px-6 pt-10 text-center text-[13px] text-gray-40">
                   리포트를 불러오고 있어요...
@@ -98,8 +111,8 @@ function Report({ onOpenMenu }) {
             </div>
           </>
         )}
-      </main>
-    </ScreenFrame>
+      </div>
+    </main>
   );
 }
 
