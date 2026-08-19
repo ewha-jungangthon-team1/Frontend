@@ -48,7 +48,7 @@ function ReportRecentTab({ summary }) {
 
         <div className="mt-3">
           {chart.points.length > 0 ? (
-            <MetricGraph points={chart.points} />
+            <MetricGraph points={chart.points} variant="line" />
           ) : (
             <p className="py-10 text-center text-[13px] text-gray-40">
               표시할 데이터가 없어요

@@ -145,7 +145,7 @@ function Home({ onOpenMenu }) {
               </span>
             </div>
 
-            <span className="flex shrink-0 items-center gap-0.5 self-end text-[13px] font-medium leading-[1.5] tracking-[-0.01em] text-main-1">
+            <span className="flex shrink-0 items-center gap-0.5 self-end text-[15px] font-medium leading-[1.5] tracking-[-0.01em] text-main-1">
               케어 방법 보기
               <svg
                 xmlns="http://www.w3.org/2000/svg"

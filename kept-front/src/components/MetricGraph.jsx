@@ -32,10 +32,14 @@ function computeYAxisTicks(values) {
   return Array.from({ length: TICK_COUNT }, (_, i) => top - i * step);
 }
 
-// 지표 하나의 시간대별 변화를 보여주는 그래프 (그라데이션 영역 + 원형 점)
+// 지표 하나의 시간대별 변화를 보여주는 그래프
 // points: [{ time, value }]
-function MetricGraph({ points }) {
+// variant:
+//  - "area" (기본값) → Home/Care 바텀시트용. 그라데이션 영역(그림자) + 각 지점 원형 점
+//  - "line" → Report용. 영역 채움 없이 선만, 지점 점도 찍지 않는다
+function MetricGraph({ points, variant = "area" }) {
   const gradientId = useId();
+  const isArea = variant === "area";
 
   // 실제(목표) 값 기준으로 축 범위를 고정해둔다
   const values = points.map((point) => point.value);
@@ -55,8 +59,9 @@ function MetricGraph({ points }) {
   });
 
   // 라인 아래를 채우는 영역(area) path: 라인 path에 바닥선을 이어붙인다
+  // (line variant에서는 애초에 그리지 않는다)
   const areaPath =
-    coords.length > 0
+    isArea && coords.length > 0
       ? `${linePath} L ${coords[coords.length - 1].x} ${GRAPH_HEIGHT} L ${coords[0].x} ${GRAPH_HEIGHT} Z`
       : "";
 
@@ -64,7 +69,7 @@ function MetricGraph({ points }) {
     <div>
       <div className="flex">
         {/* y축 눈금 라벨 */}
-        <div className="flex h-[160px] flex-col justify-between pr-2 text-[11px] leading-none text-gray-40">
+        <div className="flex h-[160px] flex-col justify-between pr-8 text-[11px] leading-none text-gray-40">
           {yAxisLabels.map((label) => (
             <span key={label}>{label}</span>
           ))}
@@ -77,22 +82,24 @@ function MetricGraph({ points }) {
             className="h-[160px] w-full"
             preserveAspectRatio="none"
           >
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="0%"
-                  stopColor="var(--color-main-2)"
-                  stopOpacity="0.28"
-                />
-                <stop
-                  offset="100%"
-                  stopColor="var(--color-main-2)"
-                  stopOpacity="0"
-                />
-              </linearGradient>
-            </defs>
+            {isArea && (
+              <defs>
+                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="0%"
+                    stopColor="var(--color-main-2)"
+                    stopOpacity="0.28"
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor="var(--color-main-2)"
+                    stopOpacity="0"
+                  />
+                </linearGradient>
+              </defs>
+            )}
 
-            {/* 라인 아래 그라데이션 영역 */}
+            {/* 라인 아래 그라데이션 영역(그림자): area variant에서만 그린다 */}
             {areaPath && (
               <path d={areaPath} fill={`url(#${gradientId})`} stroke="none" />
             )}
@@ -106,17 +113,18 @@ function MetricGraph({ points }) {
               strokeLinejoin="round"
             />
 
-            {/* 각 측정 지점 */}
-            {coords.map((coord, index) => (
-              <circle
-                key={`${coord.time}-${index}`}
-                cx={coord.x}
-                cy={coord.y}
-                r="3.5"
-                className="fill-white stroke-main-2"
-                strokeWidth="2"
-              />
-            ))}
+            {/* 각 측정 지점: area variant에서만 점을 찍는다 (동그라미 대신 네모) */}
+            {isArea &&
+              coords.map((coord, index) => (
+                <rect
+                  key={`${coord.time}-${index}`}
+                  x={coord.x - 3.5}
+                  y={coord.y - 3.5}
+                  width="7"
+                  height="7"
+                  className="fill-main-2"
+                />
+              ))}
           </svg>
         </div>
       </div>

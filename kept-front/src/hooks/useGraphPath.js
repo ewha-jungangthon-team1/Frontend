@@ -13,7 +13,14 @@ function useGraphPath(
   // 값이 모두 같을 때 0으로 나누는 것을 방지
   const valueRange = maxValue - minValue || 1;
 
-  const stepX = (width - padding * 2) / (points.length - 1);
+  const innerWidth = width - padding * 2;
+
+  // 점이 1개뿐일 때 (points.length - 1 === 0) stepX가 Infinity가 되고
+  // x = index * stepX(=0 * Infinity)가 NaN이 되어 점이 화면 밖 이상한
+  // 위치에 그려지던 버그가 있었다. 점이 1개일 때도 다른 점들과 마찬가지로
+  // 그래프 시작 지점(왼쪽 끝, x = padding)에 놓는다. (가운데가 아님 —
+  // 이후 점이 추가되면 첫 점은 계속 왼쪽 끝에 남아있어야 하므로)
+  const stepX = points.length > 1 ? innerWidth / (points.length - 1) : 0;
 
   // 각 데이터 포인트를 실제 svg 좌표(x, y)로 변환
   const coords = points.map((point, index) => {
