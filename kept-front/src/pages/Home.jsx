@@ -58,7 +58,7 @@ function Home({ onOpenMenu }) {
 
   if (isLoading) {
     return (
-      <main className="relative mx-auto flex min-h-[852px] w-full max-w-[393px] items-center justify-center bg-white">
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] items-center justify-center bg-white">
         <p className="text-[15px] text-gray-50">불러오는 중...</p>
       </main>
     );
@@ -66,17 +66,17 @@ function Home({ onOpenMenu }) {
 
   if (isError) {
     return (
-      <main className="relative mx-auto flex min-h-[852px] w-full max-w-[393px] items-center justify-center bg-white px-6 text-center">
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] items-center justify-center bg-white px-6 text-center">
         <p className="text-[15px] text-gray-50">{error.message}</p>
       </main>
     );
   }
 
   return (
-    <main className="relative mx-auto min-h-[852px] w-full max-w-[393px] overflow-hidden bg-white">
+    <main className="relative mx-auto min-h-dvh w-full max-w-[393px] overflow-hidden bg-white">
       <HomeBackground />
 
-      <div className="relative z-10 flex min-h-[852px] flex-col">
+      <div className="relative z-10 flex min-h-dvh flex-col">
         <header className="flex items-start justify-between px-6 pt-[83px]">
           <h1 className="text-[28px] leading-[1.32] tracking-[-0.03em] text-gray-80">
             Home
@@ -130,7 +130,7 @@ function Home({ onOpenMenu }) {
             </button> */}
         </section>
         <div className="px-6 pb-[55px] pt-4">
-          <p className="mb-2 text-[14px] leading-[1.5] tracking-[-0.01em] text-gray-50">
+          <p className="mb-2 text-[14px] leading-[1.5] tracking-[-0.01em] text-gray-60">
             지금 필요한 케어
           </p>
 
@@ -139,9 +139,11 @@ function Home({ onOpenMenu }) {
             className="flex w-full flex-col gap-3 rounded-lg bg-white px-4 py-3.5 text-gray-90"
           >
             {/*quick_care 값을 받아 안내 문구 표시 */}
-            <span className="text-[20px] font-regular leading-[1.4] tracking-[-0.01em]">
-              {state?.quick_care ?? "가방 상태를 확인해 주세요."}
-            </span>
+            <div className="max-w-[345px]">
+              <span className="block break-keep text-[20px] font-regular leading-[1.4] tracking-[-0.01em]">
+                {state?.quick_care ?? "가방 상태를 확인해 주세요."}
+              </span>
+            </div>
 
             <span className="flex shrink-0 items-center gap-0.5 self-end text-[13px] font-medium leading-[1.5] tracking-[-0.01em] text-main-1">
               케어 방법 보기

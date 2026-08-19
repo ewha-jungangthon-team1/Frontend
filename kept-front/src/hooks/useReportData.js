@@ -41,6 +41,19 @@ function toShortLabel(displayDate) {
   return month && day ? `${month}.${day}` : displayDate;
 }
 
+const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+
+// {display_date: "2026-08-19"} → 화면에 쓰는 "08.19(수)" 형태로 변환
+function toDateWithWeekday(displayDate) {
+  if (!displayDate) return "";
+  const [, month, day] = displayDate.split("-");
+  if (!month || !day) return displayDate;
+
+  const weekday =
+    WEEKDAY_LABELS[new Date(`${displayDate}T00:00:00+09:00`).getDay()];
+  return `${month}.${day}(${weekday})`;
+}
+
 // 소수를 퍼센트 문자열로: 0.0109 → "1.1%"
 function toPercent(ratio, digits = 1) {
   if (ratio === null || ratio === undefined) return null;
@@ -129,7 +142,7 @@ function useReportData() {
     ? report.metrics.daily_series.map((day) => ({
         // daily_series에는 별도 id가 없어 date를 고유 키로 사용한다
         id: day.date,
-        date: day.display_date,
+        date: toDateWithWeekday(day.display_date),
         loadKg: day.load_kg,
         deformationPercent: day.deformation_percent,
         moistureDetected: day.moisture_detected,
