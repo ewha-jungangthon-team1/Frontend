@@ -512,9 +512,9 @@ function MyBagDetail({ onOpenMenu }) {
         }`}
       >
         {isMainBag
-          ? "현재 메인 가방이에요"
+          ? "메인 가방으로 등록중"
           : isSelectable
-            ? "메인 가방으로 변경하기"
+            ? "메인 가방으로 등록하기"
             : "현재 선택할 수 없는 가방이에요"}
       </button>
     </main>
