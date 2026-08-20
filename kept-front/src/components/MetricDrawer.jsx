@@ -1,5 +1,6 @@
 import MetricGraph from "./MetricGraph";
 import LoadDistributionGraph from "./LoadDistributionGraph";
+import { Link } from "react-router";
 
 // 지표 배지를 클릭했을 때 화면 아래에서 올라오는 그래프 바텀시트
 // metric이 없으면(null) 화면 아래로 숨겨진 상태를 유지한다
@@ -57,13 +58,14 @@ function MetricDrawer({ metric, onClose }) {
             </div>
           )}
           <div className="flex justify-end">
-            <button
-              type="button"
+            <Link
+              to="/report"
+              onClick={onClose}
               className="mt-5 flex items-center gap-0.5 text-[14px] font-medium leading-[1.5] tracking-[-0.01em] text-main-1"
             >
               {metric?.moreLabel ?? "관련 기록 더 보기"}
               <img src="/icons/right_brown.png" alt="" className="size-4" />
-            </button>
+            </Link>
           </div>
         </div>
       </div>
