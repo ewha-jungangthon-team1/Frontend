@@ -16,7 +16,7 @@ import client from "./client";
  */
 
 export const ensureLiveSession = (publicToken) =>
-  client.post(`/bags/${publicToken}/live-sessions/ensure/`);
+  client.post(`api/bags/${publicToken}/live-sessions/ensure/`);
 
 /**
  * 진행 중인 LIVE Session의 "가장 최신 센서 데이터 1건"을 조회
@@ -97,4 +97,4 @@ export const ensureLiveSession = (publicToken) =>
  * }>}
  */
 export const getLatestReading = (sessionId) =>
-  client.get(`/sessions/${sessionId}/latest-reading/`);
+  client.get(`api/sessions/${sessionId}/latest-reading/`);

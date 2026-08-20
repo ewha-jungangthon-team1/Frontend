@@ -95,4 +95,4 @@ import client from "./client";
  * }>}
  */
 export const getLatestReport = (publicToken) =>
-  client.get(`/bags/${publicToken}/reports/latest/`);
+  client.get(`api/bags/${publicToken}/reports/latest/`);

@@ -212,10 +212,7 @@ function MyBagDetail({ onOpenMenu }) {
 
     const animateScroll = (currentTime) => {
       const elapsedTime = currentTime - startTime;
-      const progress = Math.min(
-        elapsedTime / CAROUSEL_ANIMATION_DURATION,
-        1,
-      );
+      const progress = Math.min(elapsedTime / CAROUSEL_ANIMATION_DURATION, 1);
       const easedProgress =
         progress < 0.5
           ? 4 * progress * progress * progress
