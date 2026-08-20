@@ -22,6 +22,7 @@ const BAG_DETAIL_STYLE = {
   "top-handle-01": { width: 256, height: 222, top: 0 },
   "top-handle-02": { width: 262, height: 196, top: -1 },
   "top-handle-03": { width: 242, height: 172, top: 31 },
+  "top-handle-04": { width: 252, height: 219, top: -12 },
 
   "shoulder-01": { width: 306, height: 174, top: 40 },
   "shoulder-02": { width: 258, height: 154, top: 37 },
