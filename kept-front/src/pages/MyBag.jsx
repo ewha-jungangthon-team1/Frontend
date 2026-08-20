@@ -9,6 +9,7 @@ const BAG_LIST_STYLE = {
   "top-handle-01": { width: 129, height: 111, top: 4, offsetX: 8 },
   "top-handle-02": { width: 131, height: 98, top: 1, offsetX: 7 },
   "top-handle-03": { width: 121, height: 86, top: 16, offsetX: 0 },
+  "top-handle-04": { width: 126, height: 110, top: -7, offsetX: 0 },
 
   "shoulder-01": { width: 153, height: 87, top: 24, offsetX: 8 },
   "shoulder-02": { width: 129, height: 77, top: 20, offsetX: 7 },
