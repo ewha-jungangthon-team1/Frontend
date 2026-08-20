@@ -121,7 +121,7 @@ function ReportUsageDetail({ record, report, onBack }) {
         {careComment && (
           <div className="mt-4 rounded-lg bg-white px-5 py-5">
             <p className="text-[18px] font-bold leading-[1.5] tracking-[-0.03em] text-gray-100">
-              AI 코멘트
+              최근 7일 AI 케어
             </p>
             <p className="mt-2 text-[15px] font-light leading-[1.5] tracking-[-0.01em] text-gray-90">
               {careComment}

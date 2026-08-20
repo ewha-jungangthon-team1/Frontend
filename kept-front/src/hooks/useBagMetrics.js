@@ -53,7 +53,7 @@ const METRIC_PRESENTATION = {
     id: "temperature",
     type: "area",
     drawerTitle: "측정 시작 후 온도 변화",
-    moreLabel: "온도 기록 더 보기",
+    moreLabel: "리포트 더 보기",
   },
   right_load_percent: {
     id: "rightLoad",
@@ -65,19 +65,19 @@ const METRIC_PRESENTATION = {
     id: "shapeDeviation",
     type: "area",
     drawerTitle: "측정 시작 후 형태 편차 변화",
-    moreLabel: "형태 편차 기록 더 보기",
+    moreLabel: "리포트 더 보기",
   },
   internal_humidity_percent: {
     id: "humidity",
     type: "area",
     drawerTitle: "측정 시작 후 습도 변화",
-    moreLabel: "습도 기록 더 보기",
+    moreLabel: "리포트 더 보기",
   },
   material_moisture_percent: {
     id: "moisture",
     type: "area",
     drawerTitle: "측정 시작 후 수분도 변화",
-    moreLabel: "수분도 기록 더 보기",
+    moreLabel: "리포트 더 보기",
   },
 };
 
