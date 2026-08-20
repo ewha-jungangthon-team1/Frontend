@@ -22,6 +22,7 @@ const BAG_DETAIL_STYLE = {
   "top-handle-01": { width: 256, height: 222, top: 0 },
   "top-handle-02": { width: 262, height: 196, top: -1 },
   "top-handle-03": { width: 242, height: 172, top: 31 },
+  "top-handle-04": { width: 252, height: 219, top: -12 },
 
   "shoulder-01": { width: 306, height: 174, top: 40 },
   "shoulder-02": { width: 258, height: 154, top: 37 },
@@ -211,10 +212,7 @@ function MyBagDetail({ onOpenMenu }) {
 
     const animateScroll = (currentTime) => {
       const elapsedTime = currentTime - startTime;
-      const progress = Math.min(
-        elapsedTime / CAROUSEL_ANIMATION_DURATION,
-        1,
-      );
+      const progress = Math.min(elapsedTime / CAROUSEL_ANIMATION_DURATION, 1);
       const easedProgress =
         progress < 0.5
           ? 4 * progress * progress * progress
@@ -514,9 +512,9 @@ function MyBagDetail({ onOpenMenu }) {
         }`}
       >
         {isMainBag
-          ? "메인 가방으로 등록중"
+          ? "현재 메인 가방이에요"
           : isSelectable
-            ? "메인 가방으로 등록하기"
+            ? "메인 가방으로 변경하기"
             : "현재 선택할 수 없는 가방이에요"}
       </button>
     </main>
