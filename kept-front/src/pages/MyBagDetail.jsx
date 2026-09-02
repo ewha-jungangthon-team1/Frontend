@@ -83,7 +83,7 @@ function MyBagDetail({ onOpenMenu }) {
   if (!selectedCategory || bags.length === 0) {
     return (
       <main className="relative mx-auto min-h-[852px] w-full max-w-[393px] bg-white">
-        <MyBagHeader onOpenMenu={onOpenMenu} />
+        <MyBagHeader onOpenMenu={onOpenMenu} backTo="/mybag" />
 
         <p className="px-6 pt-8 text-center text-[15px] text-gray-50">
           가방 정보를 찾을 수 없어요.
@@ -212,10 +212,7 @@ function MyBagDetail({ onOpenMenu }) {
 
     const animateScroll = (currentTime) => {
       const elapsedTime = currentTime - startTime;
-      const progress = Math.min(
-        elapsedTime / CAROUSEL_ANIMATION_DURATION,
-        1,
-      );
+      const progress = Math.min(elapsedTime / CAROUSEL_ANIMATION_DURATION, 1);
       const easedProgress =
         progress < 0.5
           ? 4 * progress * progress * progress
@@ -374,7 +371,7 @@ function MyBagDetail({ onOpenMenu }) {
 
   return (
     <main className="relative mx-auto min-h-[852px] w-full max-w-[393px] overflow-hidden bg-white">
-      <MyBagHeader onOpenMenu={onOpenMenu} />
+      <MyBagHeader onOpenMenu={onOpenMenu} backTo="/mybag" />
 
       <p className="px-[26px] pt-6 text-[13px] leading-[1.5] tracking-[-0.01em] text-gray-40">
         {selectedCategory.label}

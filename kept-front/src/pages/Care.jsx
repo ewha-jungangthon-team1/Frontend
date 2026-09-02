@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router";
-import useBagStore from "../store/bagStore";
+import useMainBag from "../hooks/useMainBag";
 import useLiveSession from "../hooks/useLiveSession";
 import useDetailedCare from "../hooks/useDetailedCare";
 
@@ -56,7 +56,7 @@ function CareBackground({ themeKey }) {
 
 function Care({ onOpenMenu }) {
   const navigate = useNavigate();
-  const publicToken = useBagStore((state) => state.publicToken);
+  const { publicToken, hasRegisteredBags, isResolvingMainBag } = useMainBag();
 
   const { session, reading, isLoading, isError, error } =
     useLiveSession(publicToken);
@@ -82,11 +82,19 @@ function Care({ onOpenMenu }) {
     });
   };
 
-  if (!publicToken) {
+  if (isResolvingMainBag) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] items-center justify-center bg-white">
+        <p className="text-[15px] text-gray-50">불러오는 중...</p>
+      </main>
+    );
+  }
+
+  if (!publicToken && !hasRegisteredBags) {
     return (
       <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] items-center justify-center bg-white px-6 text-center">
         <p className="text-[15px] text-gray-50">
-          My Bag에서 메인 가방을 먼저 등록해 주세요.
+          등록된 가방이 없어요. 기기와 앱을 먼저 연결해 주세요.
         </p>
       </main>
     );

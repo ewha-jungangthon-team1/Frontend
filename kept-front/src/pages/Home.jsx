@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
 import useBagMetrics, { METRIC_KEY_TO_ID } from "../hooks/useBagMetrics";
-import useBagStore from "../store/bagStore";
+import useMainBag from "../hooks/useMainBag";
 import MetricBadge from "../components/MetricBadge";
 import MetricDrawer from "../components/MetricDrawer";
 
@@ -41,7 +41,7 @@ function Home({ onOpenMenu }) {
   const openMetric = (metricId) => setSelectedMetricId(metricId);
   const closeMetric = () => setSelectedMetricId(null);
 
-  const publicToken = useBagStore((state) => state.publicToken);
+  const { publicToken, hasRegisteredBags, isResolvingMainBag } = useMainBag();
 
   const {
     reading,
@@ -55,18 +55,26 @@ function Home({ onOpenMenu }) {
 
   const selectedMetric = metricsById[selectedMetricId] ?? null;
 
-  if (!publicToken) {
+  // 등록된 가방 목록을 아직 불러오는 중이거나, 방금 불러온 목록으로
+  // 메인 가방을 자동 지정하는 순간(리렌더 한 번)에는 로딩으로 처리한다.
+  if (isResolvingMainBag) {
+    return (
+      <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] items-center justify-center bg-white">
+        <p className="text-[15px] text-gray-50">불러오는 중...</p>
+      </main>
+    );
+  }
+
+  // 서버에 등록된 가방 자체가 하나도 없는 경우에만 안내한다.
+  // (등록된 가방이 있다면 위 useMainBag이 자동으로 메인 가방을 지정하므로
+  // 이 화면에서 별도로 "등록"을 거칠 필요가 없다. My Bag은 이후 다른
+  // 가방으로 "바꾸는" 용도로만 쓰인다.)
+  if (!publicToken && !hasRegisteredBags) {
     return (
       <main className="relative mx-auto flex min-h-dvh w-full max-w-[393px] flex-col items-center justify-center gap-4 bg-white px-6 text-center">
         <p className="text-[15px] text-gray-50">
-          My Bag에서 메인 가방을 먼저 등록해 주세요.
+          등록된 가방이 없어요. 기기와 앱을 먼저 연결해 주세요.
         </p>
-        <Link
-          to="/mybag"
-          className="rounded-lg bg-gray-80 px-4 py-2.5 text-[15px] font-medium text-white"
-        >
-          My Bag으로 이동
-        </Link>
       </main>
     );
   }
